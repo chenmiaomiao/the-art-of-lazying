@@ -4,6 +4,8 @@ A repository that promotes strategic laziness for a simplified, productive life,
 
 ## Table of Contents
 
+- [Folder Structure](#folder-structure)
+- [FExplanation](#explanation)
 - [Introduction](#introduction)
 - [The Theory of Lazying](#the-theory-of-lazying)
 - [Practical Tips and Tricks](#practical-tips-and-tricks)
@@ -11,7 +13,7 @@ A repository that promotes strategic laziness for a simplified, productive life,
 - [AI Agents and Automation](#ai-agents-and-automation)
 - [Language Learning and Vlogs](#language-learning-and-vlogs)
 - [Community Contributions](#community-contributions)
-- [Folder Structure](#folder-structure)
+
 
 ## Folder Structure
 
