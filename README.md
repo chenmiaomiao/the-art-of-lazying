@@ -15,7 +15,7 @@ A repository that promotes strategic laziness for a simplified, productive life,
 
 ## Folder Structure
 
-
+```
 the-art-of-lazying/
 │
 ├───code/
@@ -35,9 +35,19 @@ the-art-of-lazying/
 └───vlogs/
 ├───language-learning/
 └───lazy-lifestyle/
+```
 
 
 This folder structure organizes the repository's content into separate folders for code, the book, examples, and vlogs. Modify this structure as needed to suit your preferences and requirements.
+
+## Explanation
+
+- `code/`: Contains all the code files for AI agents, automation tools, and language learning projects.
+- `book/`: Stores the manuscript and resources for "The Art of Lazying" book.
+- `examples/`: Contains practical tips, use cases, and community contributions that demonstrate the application of strategic laziness.
+- `vlogs/`: Hosts vlogs related to language learning and the lazy lifestyle.
+
+Feel free to modify this structure to better suit the needs of your project.
 
 ## Introduction
 
