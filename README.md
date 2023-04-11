@@ -2,19 +2,6 @@
 
 A repository that promotes strategic laziness for a simplified, productive life, encompassing AI agents, language learning, and vlogs with practical tips and real-life use cases.
 
-## Table of Contents
-
-- [Folder Structure](#folder-structure)
-- [FExplanation](#explanation)
-- [Introduction](#introduction)
-- [The Theory of Lazying](#the-theory-of-lazying)
-- [Practical Tips and Tricks](#practical-tips-and-tricks)
-- [Use Cases](#use-cases)
-- [AI Agents and Automation](#ai-agents-and-automation)
-- [Language Learning and Vlogs](#language-learning-and-vlogs)
-- [Community Contributions](#community-contributions)
-
-
 ## Folder Structure
 
 ```
@@ -41,6 +28,21 @@ the-art-of-lazying/
 
 
 This folder structure organizes the repository's content into separate folders for code, the book, examples, and vlogs. Modify this structure as needed to suit your preferences and requirements.
+
+## Table of Contents
+
+- [Folder Structure](#folder-structure)
+- [FExplanation](#explanation)
+- [Introduction](#introduction)
+- [The Theory of Lazying](#the-theory-of-lazying)
+- [Practical Tips and Tricks](#practical-tips-and-tricks)
+- [Use Cases](#use-cases)
+- [AI Agents and Automation](#ai-agents-and-automation)
+- [Language Learning and Vlogs](#language-learning-and-vlogs)
+- [Community Contributions](#community-contributions)
+
+
+
 
 ## Explanation
 
