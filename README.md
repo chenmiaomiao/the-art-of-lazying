@@ -13,6 +13,32 @@ A repository that promotes strategic laziness for a simplified, productive life,
 - [Community Contributions](#community-contributions)
 - [Folder Structure](#folder-structure)
 
+## Folder Structure
+
+
+the-art-of-lazying/
+│
+├───code/
+│ ├───ai-agents/
+│ ├───automation/
+│ └───language-learning/
+│
+├───book/
+│ ├───manuscript/
+│ └───resources/
+│
+├───examples/
+│ ├───practical-tips/
+│ ├───use-cases/
+│ └───community-contributions/
+│
+└───vlogs/
+├───language-learning/
+└───lazy-lifestyle/
+
+
+This folder structure organizes the repository's content into separate folders for code, the book, examples, and vlogs. Modify this structure as needed to suit your preferences and requirements.
+
 ## Introduction
 
 An overview of the repository's purpose and goals, including a brief introduction to the concept of strategic laziness.
@@ -55,29 +81,5 @@ Share your own experiences, tips, and ideas on how to live a life of strategic l
 
 Example: "A forum for exchanging ideas on productivity hacks and tools to streamline daily routines."
 
-## Folder Structure
 
-
-the-art-of-lazying/
-│
-├───code/
-│ ├───ai-agents/
-│ ├───automation/
-│ └───language-learning/
-│
-├───book/
-│ ├───manuscript/
-│ └───resources/
-│
-├───examples/
-│ ├───practical-tips/
-│ ├───use-cases/
-│ └───community-contributions/
-│
-└───vlogs/
-├───language-learning/
-└───lazy-lifestyle/
-
-
-This folder structure organizes the repository's content into separate folders for code, the book, examples, and vlogs. Modify this structure as needed to suit your preferences and requirements.
 
