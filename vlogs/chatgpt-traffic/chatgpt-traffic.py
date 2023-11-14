@@ -94,11 +94,11 @@ for domain in domains:
     # print(f"The IP addresses of {domain} are: {ips}")
     # print(domain)
     # print("\n".join([ip+"/24" for ip in ips]))
-    [results.append(ip+"/24") for ip in ips]
+    [results.append(ip) for ip in ips]
 
 for ip in custom_ips:
     # print(ip + "/24")
-    results.append (ip + "/24")
+    results.append (ip)
 
 for ip in cidr:
     # print(ip)
