@@ -284,12 +284,14 @@ if __name__=="__main__":
     epd_hardware = EPaperHardware(epd_module)
     epd_display = EPaperDisplay(epd_hardware, font_root)
 
+
+    words_list = ["benevolent"]
     chooser = OpenAiChooser(words_db, word_fetcher)
 
 
     try:
         while True:
-            item = chooser.choose()
+            item = chooser.choose(words_list=words_list)
             print("word: ", item)
             content_image = epd_display.create_content_layout(item)
             epd_hardware.display_image(content_image)

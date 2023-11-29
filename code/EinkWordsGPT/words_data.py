@@ -186,6 +186,53 @@ class WordsDatabase:
                 print(f"SQLite Error: {e}")
 
 
+    def get_total_word_count(self):
+        if self.conn:
+            self.cursor.execute("SELECT COUNT(*) FROM words_phonetics")
+            return self.cursor.fetchone()[0]
+        return 0
+
+    def fetch_and_clean_word_details(self, words):
+        updated_words = []
+        for word in words:
+            word_details = self.find_word_details(word)
+
+            if word_details:
+                original_word_details = word_details.copy()
+
+                # Clean English and Japanese text
+                word_details['syllable_word'] = clean_english(word_details.get('syllable_word', ''))
+                word_details['phonetic'] = clean_english(word_details.get('phonetic', ''))
+                word_details['japanese_synonym'] = clean_japanese(word_details.get('japanese_synonym', ''))
+
+                # Check if cleaning resulted in changes
+                if word_details != original_word_details:
+                    self.update_word_details(word_details, force=True)
+                    updated_words.append(word_details)
+
+        return updated_words
+
+    def update_all_words(self, batch_size=10):
+        total_words = self.get_total_word_count()
+        processed = 0
+
+        while processed < total_words:
+            # Fetch a batch of words from the database
+            words_batch = self.fetch_words_batch(processed, batch_size)
+            words_to_update = []
+
+            for word_detail in words_batch:
+                cleaned_word_detail = self.fetch_and_clean_word_details([word_detail["word"]])
+                if cleaned_word_detail != word_detail:
+                    words_to_update.extend(cleaned_word_detail)
+
+            # Update the database with cleaned and updated word details
+            for updated_word in words_to_update:
+                print(updated_word)
+                self.update_word_details(updated_word, force=True)
+
+            processed += len(words_batch)
+
     def find_word_details(self, word):
         if self.conn:
             self.cursor.execute("SELECT word, syllable_word, phonetic, japanese_synonym FROM words_phonetics WHERE word = ?", (word.lower(),))
@@ -213,11 +260,7 @@ class WordsDatabase:
         else:
             return []
 
-    def get_total_word_count(self):
-        if self.conn:
-            self.cursor.execute("SELECT COUNT(*) FROM words_phonetics")
-            return self.cursor.fetchone()[0]
-        return 0
+    
 
     def fetch_words_batch(self, offset, limit):
         if self.conn:
@@ -690,7 +733,29 @@ class OpenAiChooser:
     def get_current_words(self):
         return self.current_words
 
-    def choose(self):
+    # def choose(self):
+    #     if not self.current_words:
+    #         self.fetch_new_words()
+
+    #     return self.current_words.pop()
+
+    def choose(self, words_list=None):
+        # If a specific list of words is provided
+        if words_list:
+            chosen_word = random.choice(words_list)
+
+            # Fetch the word details from the database
+            word_details = self.db.find_word_details(chosen_word)
+            
+            # If the word is not in the database, fetch from OpenAI and update the database
+            if not word_details:
+                word_details = self.word_fetcher.fetch_word_details([chosen_word], self.db)[0]
+                # if word_details:
+                #     self.db.insert_word_details(word_details, force=True)
+
+            return word_details
+
+        # If no specific list is provided, use the existing functionality
         if not self.current_words:
             self.fetch_new_words()
 
