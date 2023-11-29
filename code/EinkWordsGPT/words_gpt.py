@@ -235,9 +235,9 @@ class EPaperDisplay:
         get_text_size = self.get_text_size
 
         text = text.replace(" ", "").replace("(", "（").replace(")", "）")
-        regex = re.compile(r'([一-龠々ァ-ンー]+)（([ぁ-んァ-ンー]+)）')
+        regex = re.compile(r'([一-龠々ァ-ンー-]+)（([ぁ-んァ-ンー-]+)）')
 
-        plain_text = re.sub(r'（[ぁ-んァ-ンー]+）', '', text)
+        plain_text = re.sub(r'（[ぁ-んァ-ンー-]+）', '', text)
         font_size = find_font_size(plain_text, jp_font_path, max_width, max_height)
         font = ImageFont.truetype(jp_font_path, font_size)
 
@@ -253,7 +253,7 @@ class EPaperDisplay:
             draw.text((pos_x, y), preceding_text, font=font, fill=(0, 0, 0))
             pos_x += get_text_size(preceding_text, font)[0]
 
-            draw.text((pos_x, y), re.sub(r'（[ぁ-んァ-ンー]+）', '', kanji_or_katakana), font=font, fill=(0, 0, 0))
+            draw.text((pos_x, y), re.sub(r'（[ぁ-んァ-ンー-]+）', '', kanji_or_katakana), font=font, fill=(0, 0, 0))
             kanji_or_katakana_width = get_text_size(kanji_or_katakana, font)[0]
             kanji_or_katakana_height = get_text_size(kanji_or_katakana, font)[1]
 
@@ -267,7 +267,7 @@ class EPaperDisplay:
             last_match_end = end
 
         remaining_text = text[last_match_end:]
-        draw.text((pos_x, y), re.sub(r'（[ぁ-んァ-ンー]+）', '', remaining_text), font=font, fill=(0, 0, 0))
+        draw.text((pos_x, y), re.sub(r'（[ぁ-んァ-ンー-]+）', '', remaining_text), font=font, fill=(0, 0, 0))
 
 
 
@@ -285,19 +285,25 @@ if __name__=="__main__":
     epd_display = EPaperDisplay(epd_hardware, font_root)
 
 
-    words_list = ["benevolent"]
+    words_list = []
+    # words_list = ["benevolent"]
+    # words_list = ["obstreperous"]
+    # words_list = ["peregrinate"]
+
     chooser = OpenAiChooser(words_db, word_fetcher)
 
 
     try:
         while True:
             item = chooser.choose(words_list=words_list)
+            # item = chooser.choose()
             print("word: ", item)
             content_image = epd_display.create_content_layout(item)
             epd_hardware.display_image(content_image)
             time.sleep(300)  # Display each word for 5 minutes
 
     except Exception as e:
+        print("Exception: ", str(e))
         logging.info(e)
     finally:
         epd_hardware.clear_and_sleep()

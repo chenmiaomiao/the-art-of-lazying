@@ -5,10 +5,7 @@ from pykakasi import kakasi
 
 import re
 
-def remove_second_parentheses(text):
-    regex = re.compile(r'(（[^）]*）)(（[^）]*）)')
-    return re.sub(regex, lambda match: match.group(1), text)
-
+from words_data import remove_second_parentheses
 
 def update_last_10_words(database, fetcher):
     # Fetch the last 10 words from the database
@@ -95,7 +92,7 @@ def update_database_in_batches(database, fetcher, batch_size=10):
 
             updated_words = []
             for details in rechecked_details:
-                database.insert_word_details(details, force=True)
+                # database.insert_word_details(details, force=True)
                 updated_words.append(details['word'])
 
             log_updated_words(updated_words)
@@ -113,15 +110,15 @@ def batch_update_syllable_and_phonetic(database, fetcher, batch_size=10):
         words_detail = [{'word': word['word'], 'syllable_word': word['syllable_word'], 'phonetic': word['phonetic']} for word in words_batch]
 
         # Recheck details
-        rechecked_details = fetcher.recheck_syllable_and_phonetic(words_detail)
+        rechecked_details = fetcher.recheck_syllable_and_phonetic(words_detail, database)
 
         # Update the database with rechecked details
-        for details in rechecked_details:
-            # database.update_word_details(details, force=True)
+        # for details in rechecked_details:
+        #     database.update_word_details(details, force=True)
 
-            pass
+            # pass
 
-        break
+        # break
 
         processed += len(words_batch)
 
@@ -134,17 +131,17 @@ def batch_update_japanese_synonyms(database, fetcher, batch_size=10):
         words_batch = database.fetch_words_batch(processed, batch_size)
 
         # Extract just the word and Japanese synonym details
-        words_detail = [{'word': word['word'], 'japanese_synonym': word['japanese_synonym']} for word in words_batch]
+        # words_detail = [{'word': word['word'], 'japanese_synonym': word['japanese_synonym']} for word in words_batch]
 
         # Fetch new Japanese synonyms
-        updated_synonyms = fetcher.fetch_japanese_synonym(words_detail)
+        updated_synonyms = fetcher.recheck_japanese_synonym(words_batch, database)
 
         # Update the database with the new synonyms
-        for details in updated_synonyms:
-            # database.update_word_details(details, force=True)
-            pass
+        # for details in updated_synonyms:
+        #     database.update_word_details(details, force=True)
+            # pass
 
-        break
+        # break
 
         processed += len(words_batch)
 
@@ -164,15 +161,15 @@ def fetch_and_recheck_words(database, fetcher, words_list):
             #     print(f"Failed to fetch details for word: {word}")
             #     continue
 
-            pass
+            continue
 
         # Apply recheck functions
-        rechecked_details_all = fetcher.recheck_word_details([word_detail])[0]
-        rechecked_syllable_phonetic = fetcher.recheck_syllable_and_phonetic([word_detail])[0]
-        rechecked_japanese_synonym = fetcher.fetch_japanese_synonym([word_detail])[0]
+        # rechecked_details_all = fetcher.recheck_word_details([word_detail], database)[0]
+        # rechecked_syllable_phonetic = fetcher.recheck_syllable_and_phonetic([word_detail], database)[0]
+        rechecked_japanese_synonym = fetcher.recheck_japanese_synonym([word_detail], database)[0]
 
         # Update the database with the final rechecked details
-        # database.update_word_details(rechecked_japanese_synonym, force=True)
+        database.update_word_details(rechecked_japanese_synonym, force=True)
 
 
 
@@ -189,11 +186,19 @@ word_fetcher = AdvancedWordFetcher(client)
 # # Update the last 10 words
 # update_last_10_words(words_db, word_fetcher)
 
+# remove_consecutive_parenthesis_in_batches(words_db, word_fetcher)
+
 # Update the database in batches
 # update_database_in_batches(words_db, word_fetcher, 5)
+# words_db.update_all_words(batch_size=10)
+
 # batch_update_syllable_and_phonetic(words_db, word_fetcher, 5)
 # batch_update_japanese_synonyms(words_db, word_fetcher, 5)
-fetch_and_recheck_words(words_db, word_fetcher, ["analysis"])
+
+
+# words_list = ["baguette"]
+# fetch_and_recheck_words(words_db, word_fetcher, words_list)
+
 
 # Close the database connection
 words_db.close()
