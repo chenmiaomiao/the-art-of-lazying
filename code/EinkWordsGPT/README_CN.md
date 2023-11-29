@@ -1,5 +1,9 @@
 # Eink Words GPT 项目说明书
 
+[English README](README.md)
+
+![4101701260042_.pic](demo.jpg)
+
 ## 介绍 Introduction
 
 欢迎来到 Eink Words GPT 项目 - 一个独特的电子墨水技术与先进的人工智能（ChatGPT）相结合的项目，旨在带来创新和动态的学习方式。这个项目是我“懒人艺术”主题的一部分，将我的生活哲学融入生活、学习和视频博客的各个方面。Eink Words GPT 旨在提供一种引人入胜且轻松的方式来学习新词汇及其细微差别。

@@ -2,7 +2,8 @@
 
 [中文介绍](README_CN.md)
 
-## ![4101701260042_.pic](/Users/lachlan/Library/Containers/com.tencent.xinWeChat/Data/Library/Application Support/com.tencent.xinWeChat/2.0b4.0.9/6865f5dbd2420df9f80631b63610dd96/Message/MessageTemp/190f72af1f454d75f49adfa370e3f5d2/Image/4101701260042_.pic.jpg)Introduction
+![4101701260042_.pic](demo.jpg)
+## Introduction
 
 Welcome to the Eink Words GPT project - a unique blend of e-ink technology and advanced AI (ChatGPT) to bring an innovative and dynamic approach to word learning. This project, part of my "The Art of Lazying" theme, integrates my life philosophy into various aspects of life, study, and vlogs. The Eink Words GPT aims to provide an engaging and effortless way to learn new words and their nuances.
 
