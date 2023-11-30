@@ -31,6 +31,15 @@ import csv
 from pykakasi import kakasi
 import re
 
+class JSONParsingError(Exception):
+    """Exception raised for errors in the JSON parsing."""
+    def __init__(self, message, json_string, error_pos=None):
+        self.message = message
+        self.json_string = json_string
+        self.error_pos = error_pos
+        self.error_details = f"{self.message}\nError Position: {self.error_pos}" if self.error_pos else f"{self.message}"
+        full_message = f"{self.error_details}\nJSON String: {self.json_string}"
+        super().__init__(full_message)
 
 def remove_second_parentheses(text):
     regex = re.compile(r'(（[^）]*）)(（[^）]*）)')
@@ -162,34 +171,7 @@ class WordsDatabase:
             except sqlite3.Error as e:
                 print(f"SQLite Error: {e}")
 
-    # def update_word_details(self, word_details, force=False):
-    #     if self.conn:
-    #         word = word_details.get('word', '') # .lower()
-
-    #         # Prepare data and query for dynamic update
-    #         data_to_update = []
-    #         query = "INSERT INTO words_phonetics (word"
-
-    #         for key in ['syllable_word', 'phonetic', 'japanese_synonym']:
-    #             if key in word_details:
-    #                 cleaned_value = clean_english(word_details[key]) if key != 'japanese_synonym' else clean_japanese(word_details[key])
-    #                 data_to_update.append(cleaned_value)
-    #                 query += f", {key}"
-
-    #         query += ") VALUES (?"
-    #         query += ", ?" * len(data_to_update)
-    #         query += ")"
-
-    #         # UPSERT operation: Update if exists, insert if not
-    #         update_part = ", ".join([f"{key} = excluded.{key}" for key in ['syllable_word', 'phonetic', 'japanese_synonym'] if key in word_details])
-    #         query += f" ON CONFLICT(word) DO UPDATE SET {update_part}"
-
-    #         try:
-    #             # Execute the query with the values
-    #             self.cursor.execute(query, (word, *data_to_update))
-    #             self.conn.commit()
-    #         except sqlite3.Error as e:
-    #             print(f"SQLite Error: {e}")
+ 
 
     def update_word_details(self, word_details, force=False):
         if self.conn:
@@ -439,32 +421,23 @@ class AdvancedWordFetcher:
             writer.writerows(self.examples)
 
 
-
     def extract_and_parse_json(self, text):
-        # Regular expression to find a string enclosed in square brackets
         bracket_pattern = r'\[.*?\]'
         matches = re.findall(bracket_pattern, text, re.DOTALL)
 
         if not matches:
-            print("Pefect string, but cannot be parsed: ", text)
-            raise ValueError(f"Failed to parse JSON: {e}")
-            # return None  # or raise an exception if no match is found
+            raise JSONParsingError("No JSON string found in text", text)
 
-        # Assuming the first match is the desired JSON string
         json_string = matches[0]
 
         try:
-            # Parse the JSON string
             parsed_json = json.loads(json_string)
-
             if len(parsed_json) == 0:
-                print("Pefect string, but cannot be parsed: ", text)
-                raise ValueError(f"Failed to parse JSON: {e}")
-
+                raise JSONParsingError("Parsed JSON string is empty", json_string)
             return parsed_json
         except json.JSONDecodeError as e:
-            print("Pefect string, but cannot be parsed! ")
-            raise ValueError(f"Failed to parse JSON: {e}")
+            raise JSONParsingError(f"JSON Decode Error: {e}", json_string)
+
 
     def load_propensities(self):
         propensities_file_path = 'data/words_propensity.txt'
@@ -476,55 +449,61 @@ class AdvancedWordFetcher:
         return propensities
 
 
+
     def fetch_words(self, num_words, word_database):
         propensities = self.load_propensities()
         unique_words = []
+        messages = []
+
+        # Choose the appropriate prompt based on whether propensities are available
+        if propensities:
+            criteria_list = "\n".join([f"{i+1}) {propensity}" for i, propensity in enumerate(propensities)])
+            user_message = (
+                f"Generate a python list of {num_words*5} unique advanced lowercase words that meet one or more of the following criteria:\n"
+                f"{criteria_list}\n"
+                "Format the list for compatibility with json.loads, starting with [ and ending with ]. "
+                # "and include the word's tendency or special characteristic next to each word."
+                "The output should be like ['word 1', 'word 2', ..., 'word N']."
+            )
+        else:
+            user_message = (
+                f"Think wildly and provide me with a python list of {num_words*5} unique advanced lowercase words that are often used in formal readings. "
+                "Give me only the plain python list compatible with json.loads and start with [ and end with ]."
+                "The output should be like ['word 1', 'word 2', ..., 'word N']. "
+            )
+
+        messages = [
+            {"role": "system", "content": "You are an assistant with a vast vocabulary and creativity. You are excellent in providing python list of words without any extra information. "},
+            {"role": "user", "content": user_message}
+        ]
 
         for _ in range(self.max_retries):
             try:
-                # Choose the appropriate prompt based on whether propensities are available
-                if propensities:
-                    criteria_list = "\n".join([f"{i+1}) {propensity}" for i, propensity in enumerate(propensities)])
-                    user_message = (
-                        f"Generate a python list of {num_words} unique advanced words that meet one or more of the following criteria:\n"
-                        f"{criteria_list}\n"
-                        "Format the list for compatibility with json.loads, starting with [ and ending with ]. "
-                        # "and include the word's tendency or special characteristic next to each word."
-                        "The output should be like ['word 1', 'word 2', ..., 'word N']."
-                    )
-                else:
-                    user_message = (
-                        f"Think wildly and provide me with a python list of {num_words} unique advanced words that are often used in formal readings. "
-                        "Give me only the plain python list compatible with json.loads and start with [ and end with ]."
-                        "The output should be like ['word 1', 'word 2', ..., 'word N']. "
-                    )
+                
 
                 response = self.client.chat.completions.create(
                     model=self.model_name[1],
-                    messages=[
-                        {"role": "system", "content": "You are an assistant with a vast vocabulary and creativity. You are excellent in providing python list of words without any extra words. "},
-                        {"role": "user", "content": user_message}
-                    ]
+                    messages=messages
                 )
-
-    
-
-                # print(response)
 
                 words_list = self.extract_and_parse_json(response.choices[0].message.content)
                 unique_words = [word for word in words_list if not word_database.word_exists(word)]
                 if unique_words:
                     break
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
+
+            except JSONParsingError as jpe:
+                print(f"JSON parsing failed: {jpe.error_details}")
+                # messages.append({"role": "system", "content": response.choices[0].message.content})
+                messages.append({"role": "system", "content": jpe.json_string})
+                messages.append({"role": "user", "content": f"JSON parsing failed: {jpe.error_details}"})
                 continue
-            except Exception as e:  # General exception catch
+            except Exception as e:
                 print(f"An unexpected error occurred: {e}")
-            else:
-                print("Fetched unique words successfully.")
-                break
+                raise e
+
         if not unique_words:
             raise RuntimeError("Failed to fetch unique words after maximum retries.")
+
         return unique_words
 
     def fetch_word_details(self, words, word_database, num_words_phonetic=10):
@@ -542,16 +521,25 @@ class AdvancedWordFetcher:
             "The words to process are: {}."
         ).format(json.dumps(self.examples, ensure_ascii=False, separators=(',', ':')), ', '.join(random_words))
 
+
+                
+        messages = [
+            {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing detailed phonetic and linguistic attributes for given words."},
+            {"role": "user", "content": detailed_list_message}
+        ]
+
+        
+
         for _ in range(self.max_retries):
             try:
+
                 print(f"Querying {random_words} from OpenAI...")
+
                 response = self.client.chat.completions.create(
                     model=self.model_name[1],
-                    messages=[
-                        {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing detailed phonetic and linguistic attributes for given words."},
-                        {"role": "user", "content": detailed_list_message}
-                    ]
+                    messages=messages
                 )
+                
                 word_phonetics = self.extract_and_parse_json(response.choices[0].message.content)
 
 
@@ -565,15 +553,19 @@ class AdvancedWordFetcher:
                 self.examples= word_phonetics[0:2]
                 self.save_examples()
                 return word_phonetics
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
+            except JSONParsingError as jpe:
+                print(f"JSON parsing failed: {jpe.error_details}")
+                # messages.append({"role": "system", "content": response.choices[0].message.content})
+                messages.append({"role": "system", "content": jpe.json_string})
+                messages.append({"role": "user", "content": f"JSON parsing failed: {jpe.error_details}"})
                 continue
-            except Exception as e:  # General exception catch
+            except Exception as e:
                 print(f"An unexpected error occurred: {e}")
-                raise Exception(f"An unexpected error occurred: {e}")
+                raise e
             else:
                 print("Fetched word details successfully.")
                 return word_phonetics
+
         raise RuntimeError("Failed to parse response after maximum retries.")
 
     def recheck_word_details(self, word_details, word_database=None, num_words_phonetic=10, recheck=False):
@@ -587,7 +579,7 @@ class AdvancedWordFetcher:
         detailed_list_message = (
             "Let's recheck each word's details and ensure they are correctly formatted. "
             "The syllable_word should have central dots · separating syllables, and the phonetic transcription should have phonemes also separated by ·. "
-            "Ensure the word syllables and phonetic separation are syncronized. "
+            "Ensure the word syllables and phonetic separation are syncronized and have equal number of separations. "
             "For Japanese synonyms, let's place the hiragana (furigana) accurately. Take 'もの悲しい' as an example – it should be formatted as 'もの悲（かな）しい', with the hiragana following the kanji. "
             "'容易にする' is best formatted as '容易（ようい）にする', moving 'する' after the parentheses for clarity. "
             "For 'その後', it should simply be 'その後（ご)', without repeating the hiragana in parentheses. "
@@ -596,17 +588,22 @@ class AdvancedWordFetcher:
         ).format(json.dumps(word_details, ensure_ascii=False, separators=(',', ':')))
 
 
+        messages = [
+            {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing detailed phonetic and linguistic attributes for given words."},
+            {"role": "user", "content": detailed_list_message}
+        ]
+
         for _ in range(self.max_retries):
             try:
                 print(f"Rechecking {words} from OpenAI...")
+                
+                
+
                 response = self.client.chat.completions.create(
                     # model="gpt-3.5-turbo",
                     # model="gpt-4",
                     model=self.model_name[1],
-                    messages=[
-                        {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing detailed phonetic and linguistic attributes for given words."},
-                        {"role": "user", "content": detailed_list_message}
-                    ]
+                    messages=messages
                 )
                 word_phonetics = self.extract_and_parse_json(response.choices[0].message.content)
                 print("Parsed rechecked result: ", word_phonetics)
@@ -620,12 +617,15 @@ class AdvancedWordFetcher:
                 # self.recheck_japanese_synonym(word_phonetics, word_database)
                 return word_phonetics
 
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
+            except JSONParsingError as jpe:
+                print(f"JSON parsing failed: {jpe.error_details}")
+                # messages.append({"role": "system", "content": response.choices[0].message.content})
+                messages.append({"role": "system", "content": jpe.json_string})
+                messages.append({"role": "user", "content": f"JSON parsing failed: {jpe.error_details}"})
                 continue
-            except Exception as e:  # General exception catch
-                # print(f"An unexpected error occurred: {e}")
-                raise Exception(f"An unexpected error occurred: {e}")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+                raise e
             else:
                 print("Fetched and rechecked word details successfully.")
                 return word_phonetics
@@ -651,19 +651,24 @@ class AdvancedWordFetcher:
         detailed_list_message = (
             "Let's recheck each word's details and ensure they are correctly formatted. "
             "The syllable_word should have central dots · separating syllables, and the phonetic transcription should have phonemes also separated by ·. "
-            "Ensure the word syllables and phonetic separation are syncronized. "
+            "Ensure the word syllables and phonetic separation are syncronized and have equal number of separations. "
             "Please output as SAME FORMAT and correct these words in the list as needed: {}."
         ).format(json.dumps(word_details_formatted, ensure_ascii=False, separators=(',', ':')))
+
+        messages = [
+            {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing accurate and detailed phonetic and linguistic attributes for given words. You are excellent in separate words and their phonetics into consistent and accurate separations with '·'."},
+            {"role": "user", "content": detailed_list_message}
+        ]
 
         for _ in range(self.max_retries):
             try:
                 print(f"Rechecking syllable and phonetic for {words} from OpenAI...")
+                
+                
+
                 response = self.client.chat.completions.create(
                     model=self.model_name[1],
-                    messages=[
-                        {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing accurate and detailed phonetic and linguistic attributes for given words. You are excellent in separate words and their phonetics into consistent and accurate separations with '·'."},
-                        {"role": "user", "content": detailed_list_message}
-                    ]
+                    messages=messages
                 )
 
                 print("Rechecked result: ", response.choices[0].message.content)
@@ -676,11 +681,15 @@ class AdvancedWordFetcher:
                     if word_database:
                         word_database.update_word_details(detail)
                 return word_phonetics
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
+            except JSONParsingError as jpe:
+                print(f"JSON parsing failed: {jpe.error_details}")
+                # messages.append({"role": "system", "content": response.choices[0].message.content})
+                messages.append({"role": "system", "content": jpe.json_string})
+                messages.append({"role": "user", "content": f"JSON parsing failed: {jpe.error_details}"})
                 continue
             except Exception as e:
-                raise Exception(f"An unexpected error occurred: {e}")
+                print(f"An unexpected error occurred: {e}")
+                raise e
             else:
                 print("Fetched and rechecked word details successfully.")
                 return word_phonetics
@@ -716,15 +725,20 @@ class AdvancedWordFetcher:
             "Please output as SAME FORMAT python list of dict and correct these words in the list as needed : {}."
         ).format(json.dumps(word_details_formatted, ensure_ascii=False, separators=(',', ':')))
 
+        messages = [
+            {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing detailed phonetic and linguistic attributes for given words. You are excellent in providing hiragana (furigana) for consecutive kanji/katakana. "},
+            {"role": "user", "content": detailed_list_message}
+        ]
+
         for _ in range(self.max_retries):
             try:
                 print(f"Fetching Japanese synonyms for {word_details_formatted} from OpenAI...")
+                
+                
+
                 response = self.client.chat.completions.create(
                     model=self.model_name[1],
-                    messages=[
-                        {"role": "system", "content": "You are an assistant skilled in linguistics, capable of providing detailed phonetic and linguistic attributes for given words. You are excellent in providing hiragana (furigana) for consecutive kanji/katakana. "},
-                        {"role": "user", "content": detailed_list_message}
-                    ]
+                    messages=messages
                 )
 
                 print("Rechecked Japanese synonym: ", response.choices[0].message.content)
@@ -738,15 +752,19 @@ class AdvancedWordFetcher:
                         word_database.update_word_details(detail)
 
                 return word_phonetics
-            except json.JSONDecodeError as e:
-                print(f"JSON Decode Error: {e}")
+            except JSONParsingError as jpe:
+                print(f"JSON parsing failed: {jpe.error_details}")
+                # messages.append({"role": "system", "content": response.choices[0].message.content})
+                messages.append({"role": "system", "content": jpe.json_string})
+                messages.append({"role": "user", "content": f"JSON parsing failed: {jpe.error_details}"})
                 continue
             except Exception as e:
-                raise Exception(f"An unexpected error occurred: {e}")
-
+                print(f"An unexpected error occurred: {e}")
+                raise e
             else:
                 print("Fetched and rechecked word details successfully.")
                 return word_phonetics                
+
         raise RuntimeError("Failed to parse response after maximum retries.")
 
 
@@ -762,70 +780,67 @@ class AdvancedWordFetcher:
 # print(chosen_word)
 
 class OpenAiChooser:
-    def __init__(self, db, word_fetcher):
+    def __init__(self, db, word_fetcher, words_list=None):
         self.db = db
         self.word_fetcher = word_fetcher
+        self.original_words_list = words_list
         self.current_words = []
-        # self.fetch_new_words()
+        self.words_iterator = iter([])
+
+        # Process the provided words_list only if it's not None
+        if self.original_words_list:
+            self.process_words_list()
+
+    def process_words_list(self):
+        self.current_words = []
+        for word in self.original_words_list:
+            word_details = self.db.find_word_details(word)
+            if not word_details:
+                word_details = self.word_fetcher.fetch_word_details([word], self.db)[0]
+            self.current_words.append(word_details)
+        self.words_iterator = iter(self.current_words)
 
     def _is_daytime_in_hk(self):
         hk_timezone = pytz.timezone('Asia/Hong_Kong')
         hk_time = datetime.now(hk_timezone)
         # return 8 <= hk_time.hour < 24  # Daytime hours in Hong Kong
-        # return False
         return True
 
-
     def fetch_new_words(self):
-        if self._is_daytime_in_hk():
-            # Fetch 10 words from OpenAI and 10 from the database
-            words = self.word_fetcher.fetch_words(10, self.db)
-            openai_words = self.word_fetcher.fetch_word_details(words, self.db)
-            db_words = self.db.fetch_random_words(10)
+        # If original_words_list is None, fetch new words dynamically
+        if not self.original_words_list:
+            if self._is_daytime_in_hk():
+                words = self.word_fetcher.fetch_words(10, self.db)
+                openai_words = self.word_fetcher.fetch_word_details(words, self.db, num_words_phonetic=10)
+                db_words = self.db.fetch_random_words(10)
+            else:
+                db_words = self.db.fetch_random_words(20)
+                openai_words = []
 
-            print("openai_words: ", openai_words)
-            print("db_words: ", db_words)
+            self.current_words = openai_words + db_words
+            random.shuffle(self.current_words)
         else:
-            # Fetch 20 words from the database at night
-            db_words = self.db.fetch_random_words(20)
-            openai_words = []
+            # Repopulate current_words using original_words_list
+            self.process_words_list()
 
-        self.current_words = openai_words + db_words
-        # self.current_words = openai_words
-        random.shuffle(self.current_words)
+        self.words_iterator = iter(self.current_words)
+
+    def choose(self):
+        try:
+            return next(self.words_iterator)
+        except StopIteration:
+            print("StopIteration encountered in choose method.")
+            if self.original_words_list:
+                print("Restarting iterator from the beginning.")
+                self.words_iterator = iter(self.current_words)
+                return next(self.words_iterator)
+            else:
+                print("Fetching new words as original_words_list is None.")
+                self.fetch_new_words()
+                return next(self.words_iterator)
 
     def get_current_words(self):
         return self.current_words
-
-    # def choose(self):
-    #     if not self.current_words:
-    #         self.fetch_new_words()
-
-    #     return self.current_words.pop()
-
-    def choose(self, words_list=None):
-        # If a specific list of words is provided
-        if not (words_list is None or words_list == []):
-            chosen_word = random.choice(words_list)
-
-            # Fetch the word details from the database
-            word_details = self.db.find_word_details(chosen_word)
-            
-            # If the word is not in the database, fetch from OpenAI and update the database
-            if not word_details:
-                word_details = self.word_fetcher.fetch_word_details([chosen_word], self.db)[0]
-                # if word_details:
-                #     self.db.insert_word_details(word_details, force=True)
-
-            return word_details
-
-        # If no specific list is provided, use the existing functionality
-        if not self.current_words:
-            self.fetch_new_words()
-
-        return self.current_words.pop()
-
-
 
 if __name__ == "__main__":
 

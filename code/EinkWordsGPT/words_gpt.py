@@ -136,23 +136,36 @@ class EPaperDisplay:
         phonetic_text_cleaned = phonetic_text.replace('·', '')
         font = ImageFont.truetype(self.ipa_font_path, self.find_font_size(phonetic_text_cleaned, self.ipa_font_path, self.width, row_height))
         syllables = self.split_word(phonetic_text, self.pallete)
+        
+        # Calculate the total width of the line
         total_width = sum(self.get_text_size(syllable.replace('·', ''), font)[0] for syllable, _ in syllables)
-
+        
+        # Calculate Y position for the entire line
+        line_height = self.get_text_size(phonetic_text_cleaned, font)[1]
+        line_y = start_y + (row_height - line_height) / 2
+        
         x = (self.width - total_width) / 2
         for syllable, color in syllables:
-            draw.text((x, start_y + (row_height - self.get_text_size(syllable.replace('·', ''), font)[1]) / 2), syllable.replace('·', ''), font=font, fill=color)
+            draw.text((x, line_y), syllable.replace('·', ''), font=font, fill=color)
             x += self.get_text_size(syllable.replace('·', ''), font)[0]
 
     def draw_word(self, draw, word_text, start_y, row_height):
         word_text_cleaned = word_text.replace('·', '')
         font = ImageFont.truetype(self.default_font_path, self.find_font_size(word_text_cleaned, self.default_font_path, self.width, row_height))
         syllables = self.split_word(word_text, self.pallete)
+        
+        # Calculate the total width of the line
         total_width = sum(self.get_text_size(syllable.replace('·', ''), font)[0] for syllable, _ in syllables)
-
+        
+        # Calculate Y position for the entire line
+        line_height = self.get_text_size(word_text_cleaned, font)[1]
+        line_y = start_y + (row_height - line_height) / 2
+        
         x = (self.width - total_width) / 2
         for syllable, color in syllables:
-            draw.text((x, start_y + (row_height - self.get_text_size(syllable.replace('·', ''), font)[1]) / 2), syllable.replace('·', ''), font=font, fill=color)
+            draw.text((x, line_y), syllable.replace('·', ''), font=font, fill=color)
             x += self.get_text_size(syllable.replace('·', ''), font)[0]
+
 
 
     def draw_japanese(self, draw, japanese_text, start_y, row_height):
@@ -191,43 +204,6 @@ class EPaperDisplay:
         dummy_image = Image.new('RGB', (100, 100))
         draw = ImageDraw.Draw(dummy_image)
         return draw.textbbox((0, 0), text, font=font)[2:]
-
-    # def find_suitable_font_size(self, text, font_path, max_width, start_size=60, step=2):
-    #     """
-    #     Find the largest font size that allows the text to fit within max_width.
-    #     """
-    #     font_size = start_size
-    #     font = ImageFont.truetype(font_path, font_size)
-    #     print("text: ", text)
-    #     # text_width = font.getsize(text)[0]
-
-    #     # Create a dummy image and draw object to measure text
-    #     dummy_image = Image.new('RGB', (100, 100))
-    #     draw = ImageDraw.Draw(dummy_image)
-    #     text_bbox = draw.textbbox((0, 0), text, font=font)
-    #     text_width = text_bbox[2] - text_bbox[0]  # Calculate the text width
-
-    #     while text_width > max_width and font_size > 0:
-    #         font_size -= step
-    #         font = ImageFont.truetype(font_path, font_size)
-    #         # text_width = font.getsize(text)[0]
-
-    #         # dummy_image = Image.new('RGB', (100, 100))
-    #         # draw = ImageDraw.Draw(dummy_image)
-    #         text_bbox = draw.textbbox((0, 0), text, font=font)
-    #         text_width = text_bbox[2] - text_bbox[0]  # Calculate the text width
-
-    #     return font_size
-
-    # def get_text_size(self, text, font):
-    #     # Create a dummy image and draw object to measure text
-    #     dummy_image = Image.new('RGB', (100, 100))
-    #     draw = ImageDraw.Draw(dummy_image)
-    #     text_bbox = draw.textbbox((0, 0), text, font=font)
-    #     text_width = text_bbox[2] - text_bbox[0]  # Calculate the text width
-    #     text_height = text_bbox[3] - text_bbox[1]
-
-    #     return text_width, text_height
 
 
     def draw_japanese_with_hiragana(self, draw, text, jp_font_path, max_width, y, max_height):
@@ -285,22 +261,22 @@ if __name__=="__main__":
     epd_display = EPaperDisplay(epd_hardware, font_root)
 
 
-    words_list = []
-    # words_list = ["benevolent"]
-    # words_list = ["obstreperous"]
-    # words_list = ["peregrinate"]
 
-    chooser = OpenAiChooser(words_db, word_fetcher)
+    words_list = [
+
+    ]
+
+    chooser = OpenAiChooser(words_db, word_fetcher, words_list=words_list)
 
 
     try:
         while True:
-            item = chooser.choose(words_list=words_list)
+            item = chooser.choose()
             # item = chooser.choose()
             print("word: ", item)
             content_image = epd_display.create_content_layout(item)
             epd_hardware.display_image(content_image)
-            time.sleep(300)  # Display each word for 5 minutes
+            time.sleep(600)  # Display each word for 5 minutes
 
     except Exception as e:
         print("Exception: ", str(e))

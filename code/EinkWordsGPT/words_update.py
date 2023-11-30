@@ -197,7 +197,8 @@ word_fetcher = AdvancedWordFetcher(client)
 
 
 # words_list = ["baguette"]
-# fetch_and_recheck_words(words_db, word_fetcher, words_list)
+words_list = ["circumlocution"]
+fetch_and_recheck_words(words_db, word_fetcher, words_list)
 
 
 # Close the database connection
