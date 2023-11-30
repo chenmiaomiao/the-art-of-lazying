@@ -116,6 +116,7 @@ class EPaperDisplay:
 
     def setup_fonts(self):
         self.jp_font_path = os.path.join(self.font_root, 'HolidayMDJP.otf')
+        self.jp_font_path_fallback = os.path.join(self.font_root, 'KouzanMouhituFontOTF.otf')
         self.ipa_font_path = os.path.join(self.font_root, 'arial.ttf')
         self.default_font_path = os.path.join(self.font_root, 'Font.ttc')
 
@@ -206,6 +207,32 @@ class EPaperDisplay:
         return draw.textbbox((0, 0), text, font=font)[2:]
 
 
+    def is_char_supported(self, character, font_path, background_color=(255, 255, 255)):
+        font = ImageFont.truetype(font_path, 20)
+        image = Image.new('RGB', (40, 40), background_color)
+        draw = ImageDraw.Draw(image)
+        draw.text((5, 5), character, font=font, fill=(0, 0, 0))
+
+        for x in range(image.width):
+            for y in range(image.height):
+                if image.getpixel((x, y)) != background_color:
+                    return True
+        return False
+
+    def draw_kanji(self, draw,  text, x, y,font_paths, font_size):
+        for char in text:
+            for font_path in font_paths:
+                if self.is_char_supported(char, font_path):
+                    font = ImageFont.truetype(font_path, font_size)
+                    break
+                else:
+                    # If no font supports the character, use the last font in the list
+                    font = ImageFont.truetype(font_paths[-1], font_size)
+
+            draw.text((x, y), char, font=font, fill=(0, 0, 0))
+            x += font.getsize(char)[0]  # Update x position for next character
+
+
     def draw_japanese_with_hiragana(self, draw, text, jp_font_path, max_width, y, max_height):
         find_font_size = self.find_font_size
         get_text_size = self.get_text_size
@@ -229,7 +256,10 @@ class EPaperDisplay:
             draw.text((pos_x, y), preceding_text, font=font, fill=(0, 0, 0))
             pos_x += get_text_size(preceding_text, font)[0]
 
-            draw.text((pos_x, y), re.sub(r'（[ぁ-んァ-ンー-]+）', '', kanji_or_katakana), font=font, fill=(0, 0, 0))
+            # draw.text((pos_x, y), re.sub(r'（[ぁ-んァ-ンー-]+）', '', kanji_or_katakana), font=font, fill=(0, 0, 0))
+            font_paths = [self.jp_font_path, self.jp_font_path_fallback]
+            self.draw_kanji(draw, re.sub(r'（[ぁ-んァ-ンー-]+）', '', kanji_or_katakana), pos_x, y, font_paths, font_size)
+
             kanji_or_katakana_width = get_text_size(kanji_or_katakana, font)[0]
             kanji_or_katakana_height = get_text_size(kanji_or_katakana, font)[1]
 
@@ -263,7 +293,7 @@ if __name__=="__main__":
 
 
     words_list = [
-
+        # "impeccable"
     ]
 
     chooser = OpenAiChooser(words_db, word_fetcher, words_list=words_list)
@@ -276,7 +306,7 @@ if __name__=="__main__":
             print("word: ", item)
             content_image = epd_display.create_content_layout(item)
             epd_hardware.display_image(content_image)
-            time.sleep(600)  # Display each word for 5 minutes
+            time.sleep(300)  # Display each word for 5 minutes
 
     except Exception as e:
         print("Exception: ", str(e))

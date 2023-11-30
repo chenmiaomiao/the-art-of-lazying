@@ -826,18 +826,22 @@ class OpenAiChooser:
         self.words_iterator = iter(self.current_words)
 
     def choose(self):
+
+        word = None
         try:
-            return next(self.words_iterator)
+            word = next(self.words_iterator)
         except StopIteration:
             print("StopIteration encountered in choose method.")
             if self.original_words_list:
                 print("Restarting iterator from the beginning.")
                 self.words_iterator = iter(self.current_words)
-                return next(self.words_iterator)
+                word = next(self.words_iterator)
             else:
                 print("Fetching new words as original_words_list is None.")
                 self.fetch_new_words()
-                return next(self.words_iterator)
+                word = next(self.words_iterator)
+        word = clean_and_transcribe([word])[0]
+        return word
 
     def get_current_words(self):
         return self.current_words
