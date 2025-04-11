@@ -2,6 +2,30 @@
 
 A repository that promotes strategic laziness for a simplified, productive life, encompassing AI agents, language learning, and vlogs with practical tips and real-life use cases.
 
+![EinkWordsGPT Demo](https://raw.githubusercontent.com/lachlanchen/the-art-of-lazying/refs/heads/main/code/EinkWordsGPT/demo.jpg)
+
+## Projects
+
+### 🤖 AI-Powered Creative Tools
+
+| Project | Description | Demo |
+|---------|-------------|------|
+| [LazyEdit](https://github.com/lachlanchen/LazyEdit) | AI-powered automatic video editing tool with auto-subtitle, transcription, highlighting, and metadata generation | ![AutoCaption](demos/autocaption.PNG) |
+| [AutoPubMonitor](https://github.com/lachlanchen/AutoPubMonitor) | Automated system for monitoring, processing, and publishing video content to multiple platforms | ![AutoPublication](demos/autopublication.png) |
+| [AutoPublication](https://github.com/lachlanchen/AutoPublication) | Streamlines the journey from draft to published work | |
+| [LazyLanguageLearner](https://github.com/lachlanchen/lazylanguagelearner) | Tools for efficient language learning with minimal effort | |
+| [EinkWordsGPT](https://github.com/lachlanchen/the-art-of-lazying/tree/main/code/EinkWordsGPT) | E-ink display with GPT-powered word learning | |
+| [Grilling ChatGPT](https://github.com/lachlanchen/grilling_chatgpt) | Advanced techniques for effectively using AI assistants | |
+
+### 🔄 Automation Tools
+
+| Feature | Description | Demo |
+|---------|-------------|------|
+| **AutoCaption** | Intelligent image captioning for accessibility and discovery | ![AutoCaption](demos/autocaption.PNG) |
+| **AutoTranscription** | Converting spoken word into searchable, editable text | ![AutoTranscription](demos/autotranscription.PNG) |
+| **AutoTranslation** | Breaking language barriers for global creative exchange | ![AutoTranslation](demos/autotranslation.JPG) |
+| **AutoPublication** | Streamlining content publishing workflows | ![AutoPublication](demos/autopublication.png) |
+
 ## Folder Structure
 
 ```
@@ -22,17 +46,14 @@ the-art-of-lazying/
 │ └───community-contributions/
 │
 └───vlogs/
-├───language-learning/
-└───lazy-lifestyle/
+  ├───language-learning/
+  └───lazy-lifestyle/
 ```
-
-
-This folder structure organizes the repository's content into separate folders for code, the book, examples, and vlogs. Modify this structure as needed to suit your preferences and requirements.
 
 ## Table of Contents
 
+- [Projects](#projects)
 - [Folder Structure](#folder-structure)
-- [FExplanation](#explanation)
 - [Introduction](#introduction)
 - [The Theory of Lazying](#the-theory-of-lazying)
 - [Practical Tips and Tricks](#practical-tips-and-tricks)
@@ -41,60 +62,54 @@ This folder structure organizes the repository's content into separate folders f
 - [Language Learning and Vlogs](#language-learning-and-vlogs)
 - [Community Contributions](#community-contributions)
 
-
-
-
-## Explanation
-
-- `code/`: Contains all the code files for AI agents, automation tools, and language learning projects.
-- `book/`: Stores the manuscript and resources for "The Art of Lazying" book.
-- `examples/`: Contains practical tips, use cases, and community contributions that demonstrate the application of strategic laziness.
-- `vlogs/`: Hosts vlogs related to language learning and the lazy lifestyle.
-
-Feel free to modify this structure to better suit the needs of your project.
-
 ## Introduction
 
-An overview of the repository's purpose and goals, including a brief introduction to the concept of strategic laziness.
-
-Example: "Laziness as a way to optimize energy use and focus on what truly matters."
+The Art of Lazying presents strategic laziness as a way to optimize energy use and focus on what truly matters. This repository explores how intentional laziness can lead to higher productivity, creativity, and well-being.
 
 ## The Theory of Lazying
 
 A comprehensive introduction to the principles of strategic laziness, focusing on how to maximize productivity and well-being by prioritizing, delegating, and automating tasks.
 
-Example: "Pareto's 80/20 principle and its application to daily life."
+The key principle is applying Pareto's 80/20 rule to daily life - identifying the 20% of activities that produce 80% of desired outcomes.
 
 ## Practical Tips and Tricks
 
-A collection of actionable advice on how to apply the concepts of laziness to various aspects of life, including work, personal relationships, and self-care.
-
-Example: "Using the Pomodoro Technique to manage time and reduce burnout."
+A collection of actionable advice on applying lazy principles to work, relationships, and self-care:
+- Automating repetitive tasks
+- Using the Pomodoro Technique for time management
+- Creating systems that reduce decision fatigue
+- Leveraging AI tools for assistance
 
 ## Use Cases
 
-Real-life examples and case studies demonstrating how the principles of laziness can be applied to solve problems, improve efficiency, and promote overall well-being.
-
-Example: "How a busy entrepreneur used delegation and automation to free up time and focus on growing their business."
+Real-life examples demonstrating how lazying principles solve problems and improve efficiency:
+- How entrepreneurs use delegation and automation to focus on business growth
+- How academics streamline research workflows
+- How content creators optimize their production process
 
 ## AI Agents and Automation
 
-Explore the development of AI agents and other automation tools that can help simplify tasks and support a lazy lifestyle.
-
-Example: "Using ChatGPT as a personal assistant for task management and research."
+Explore the development of AI agents and automation tools that simplify tasks:
+- Using ChatGPT as a personal assistant
+- Building custom automation workflows
+- Creating e-ink displays for passive learning
 
 ## Language Learning and Vlogs
 
-A section dedicated to language learning, with resources and techniques to make learning more enjoyable and efficient. Also, find vlogs that document the journey of embracing the art of lazying.
-
-Example: "Creating a personalized language learning plan with spaced repetition and immersive experiences."
+Resources and techniques for efficient language learning, plus vlogs documenting the lazying journey:
+- Creating personalized language learning with spaced repetition
+- Implementing immersive learning techniques
+- Building projects that encourage passive learning
 
 ## Community Contributions
 
-Share your own experiences, tips, and ideas on how to live a life of strategic laziness, and collaborate with others who share the same interests.
+Share your own experiences, tips, and ideas on strategic laziness:
+- Forum for exchanging productivity hacks
+- Tools and templates for daily routines
+- Collaborative projects for lazy efficiency
 
-Example: "A forum for exchanging ideas on productivity hacks and tools to streamline daily routines."
+## Connect
 
-
-
-
+- Website: [lazying.art](https://lazying.art)
+- GitHub: [lachlanchen](https://github.com/lachlanchen)
+- Email: lach@lazying.art
