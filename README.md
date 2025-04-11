@@ -13,9 +13,9 @@ A repository that promotes strategic laziness for a simplified, productive life,
 | [EinkWordsGPT](https://github.com/lachlanchen/the-art-of-lazying/tree/main/code/EinkWordsGPT) | E-ink display with GPT-powered word learning | ![WordsOrigin](demos/words_card.JPG) |
 | WordsOrigin | Words origin analysis and presenting in graph. | ![WordsOrigin](demos/words_origin.jpg) |
 | [LazyLanguageLearner](https://github.com/lachlanchen/lazylanguagelearner) | Tools for efficient language learning with minimal effort | |
-| **AutoCaption** | Intelligent image captioning for accessibility and discovery (Cleaning the code) | ![AutoCaption](demos/autocaption.PNG) |
-| **AutoTranscription** (Cleaning the code) | Converting spoken word into searchable, editable text | ![AutoTranscription](demos/autotranscription.PNG) |
-| **AutoTranslation** (Cleaning the code) | Breaking language barriers for global creative exchange | ![AutoTranslation](demos/autotranslation.JPG) |
+| **AutoCaption** | Intelligent image captioning for accessibility and discovery (Code in preparation) | ![AutoCaption](demos/autocaption.PNG) |
+| **AutoTranscription** (Code in preparation) | Converting spoken word into searchable, editable text | ![AutoTranscription](demos/autotranscription.PNG) |
+| **AutoTranslation** (Code in preparation) | Breaking language barriers for global creative exchange | ![AutoTranslation](demos/autotranslation.JPG) |
 | [LazyEdit](https://github.com/lachlanchen/LazyEdit) | AI-powered automatic video editing tool with transcription, auto-subtitle, highlighting, and metadata generation |  |
 | [AutoPublication](https://github.com/lachlanchen/AutoPublication) | Streamlining content publishing workflows | ![AutoPublication](demos/autopublication.png) |
 | [AutoPubMonitor](https://github.com/lachlanchen/AutoPubMonitor) | Automated system for monitoring, processing, and publishing video content to multiple platforms |  |
