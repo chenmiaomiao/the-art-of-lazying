@@ -10,7 +10,7 @@ A repository that promotes strategic laziness for a simplified, productive life,
 
 | Project | Description | Demo |
 |---------|-------------|------|
-| [EinkWordsGPT](https://github.com/lachlanchen/the-art-of-lazying/tree/main/code/EinkWordsGPT) | E-ink display with GPT-powered word learning | ![WordsOrigin](demos/words_card.JPG) |
+| [EinkWordsGPT](https://github.com/lachlanchen/the-art-of-lazying/tree/main/code/EinkWordsGPT) | E-ink display with GPT-powered word learning | ![WordsOrigin](demos/words_card_arabic.JPG) |
 | WordsOrigin | Words origin analysis and presenting in graph. | ![WordsOrigin](demos/words_origin.jpg) |
 | [LazyLanguageLearner](https://github.com/lachlanchen/lazylanguagelearner) | Tools for efficient language learning with minimal effort | |
 | **AutoCaption** | Intelligent image captioning for accessibility and discovery (Code in preparation) | ![AutoCaption](demos/autocaption.PNG) |
