@@ -1,0 +1,11 @@
+1. **The word's Japanese synonym has more katakana characters**: Words where the Japanese equivalent uses katakana extensively.
+
+2. **Give me the country name**: Words associated with or originating from specific countries.
+
+3. **Some advanced, interesting words commonly seen in formal reading**: Words that are frequently used in formal or academic texts and are considered advanced or intriguing.
+
+4. **Words frequently seen in academics**: Words that are commonly found in academic literature or discourse.
+
+5. **Words that have funny Japanese synonyms**: Words that have Japanese equivalents which are humorous or unusual.
+
+6. **Words with interesting stories**: Words that have fascinating histories or backgrounds associated with them.
