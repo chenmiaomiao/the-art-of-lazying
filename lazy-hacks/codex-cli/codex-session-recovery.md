@@ -4,6 +4,59 @@ This note covers a real failure on `2026-07-25` for session:
 
 - `019b31cd-357c-7fa1-ba02-a74e8d3cbf2f`
 
+## Quick match
+
+Use this recovery flow when `codex resume` opens but the first model turn fails
+with output like:
+
+```text
+{
+  "type": "error",
+  "error": {
+    "type": "invalid_request_error",
+    "message": "[ObjectParam] [input[257].namespace] [unknown_parameter] Unknown parameter: 'input[257].namespace'."
+  },
+  "status": 400
+}
+```
+
+and the UI also shows:
+
+```text
+Goal blocked (/goal resume)
+```
+
+The exact `input[257]` index is not important. Any
+`Unknown parameter: 'input[...].namespace'` variant is the same class of
+failure.
+
+## One-screen operator runbook
+
+Do this from a normal shell, not from the broken resumed thread:
+
+```bash
+SKILL_DIR="${CODEX_HOME:-$HOME/.codex}/skills/codex-session-recovery"
+RECOVERY="$SKILL_DIR/scripts/codex_session_recovery.py"
+SESSION_ID="019b31cd-357c-7fa1-ba02-a74e8d3cbf2f"  # replace with the broken id
+
+python3 "$RECOVERY" --json doctor
+python3 "$RECOVERY" --json inspect "$SESSION_ID"
+python3 "$RECOVERY" --json recover "$SESSION_ID" --dry-run
+python3 "$RECOVERY" --json recover "$SESSION_ID" --yes
+python3 "$RECOVERY" --json probe "$SESSION_ID"
+```
+
+Then:
+
+1. keep the original broken thread as archive only
+2. write or reuse a private handoff for the unfinished work
+3. start a clean replacement Codex thread from that handoff
+4. continue the blocked task in the replacement thread
+
+Do not keep retrying `/goal resume` or `promote staged 4.34` inside the broken
+thread after this exact API-shape error appears. The practical fix is thread
+replacement, not another resume attempt.
+
 ## Symptom
 
 `codex resume` opened the shell UI but failed during startup with:
@@ -26,6 +79,10 @@ The old rollout contained legacy tool payloads with a top-level `namespace` fiel
 - `name:"wait", namespace:"wait"`
 
 Current Codex CLI `0.145.0` / current API validation rejected that old payload shape during resume.
+
+The failure is in old serialized thread payloads, not in the current task
+content. A later command like `promote staged 4.34` can be perfectly valid and
+still fail because resume never reaches a usable live thread state.
 
 ## Safe recovery result
 
@@ -68,6 +125,8 @@ The original thread can be loaded but cannot safely complete new model turns.
 Do not edit its rollout JSONL or the shared Codex SQLite databases to remove the
 legacy fields.
 
+Treat that thread as read-only evidence after backup and probe succeed.
+
 The working replacement is:
 
 - session: `019f9659-d32f-7e33-ad0d-3075c7e33461`
@@ -107,6 +166,16 @@ python3 "$RECOVERY" --json recover 019b31cd-357c-7fa1-ba02-a74e8d3cbf2f --dry-ru
 python3 "$RECOVERY" --json recover 019b31cd-357c-7fa1-ba02-a74e8d3cbf2f --yes
 python3 "$RECOVERY" --json probe 019b31cd-357c-7fa1-ba02-a74e8d3cbf2f
 ```
+
+## What not to do
+
+- do not hand-edit `~/.codex/sessions/.../rollout-*.jsonl`
+- do not hand-edit `~/.codex/state_5.sqlite`
+- do not assume MCP warnings are the root cause
+- do not keep retrying the same broken resumed session after the
+  `input[...].namespace` validation error is confirmed
+- do not promote staged work from the broken thread; promote it only from the
+  clean replacement thread after the handoff has been loaded
 
 ## tmux note
 
