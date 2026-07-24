@@ -21,9 +21,9 @@ This folder stores practical Codex CLI workflow tweaks used on this machine.
   - notes on Codex image drag/drop including local path metadata
 - [codex-session-recovery.md](./codex-session-recovery.md)
   - broken `codex resume` recovery after CLI/API format drift
-  - safe backup, probe, and tmux verification flow
-  - exact fix for `Unknown parameter: 'input[...].namespace'`
-  - what to do when Codex shows `Goal blocked (/goal resume)`
+  - exact same-ID repair for `Unknown parameter: 'input[...].namespace'`
+  - byte-identical backup, structured `jq` migration, semantic digest, rollback, and tmux verification
+  - conservative replacement-thread fallback when the same-ID scope gate fails
 
 ## Scope
 These docs assume Codex local state under:
