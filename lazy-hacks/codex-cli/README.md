@@ -19,6 +19,9 @@ This folder stores practical Codex CLI workflow tweaks used on this machine.
   - macOS `zsh` tutorial for `codexmv`
 - [image-drag-drop-paths.md](./image-drag-drop-paths.md)
   - notes on Codex image drag/drop including local path metadata
+- [codex-session-recovery.md](./codex-session-recovery.md)
+  - broken `codex resume` recovery after CLI/API format drift
+  - safe backup, probe, and tmux verification flow
 
 ## Scope
 These docs assume Codex local state under:
