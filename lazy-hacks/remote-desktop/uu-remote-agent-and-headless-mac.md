@@ -98,25 +98,29 @@ agent times out or its GUI connection remains blank.
 
 ## Headless 7050 iMac
 
-The 7050 iMac remained online after its monitor was unplugged, but:
+The operator connected to the 7050 iMac successfully several times through UU
+after its monitor was unplugged. Its UU GUI is therefore verified to work
+headlessly without a dummy plug or virtual display.
 
-- its UU terminal timed out waiting for the remote open response;
-- GUI attempts did not become usable;
-- LAN SSH and macOS Screen Sharing were not listening.
+One earlier UU terminal-agent attempt timed out waiting for the remote open
+response, while LAN SSH and macOS Screen Sharing were not listening. That is a
+separate terminal-agent observation; it does not indicate a failure of UU
+video, input, or headless operation.
 
-The missing active display is the leading explanation, but it has not been
-proven as the only cause. Because every interactive path is currently closed,
-the host cannot safely install its own recovery path remotely.
+This evidence supersedes the earlier missing-display diagnosis. Do not
+reconnect a monitor, install BetterDisplay, or add a dummy plug solely to make
+UU work when the headless GUI is already usable.
 
-Use a monitor or an HDMI/DisplayPort dummy plug once, then configure:
+Optional resilience paths can still be useful:
 
-1. UU Screen Recording and Accessibility permissions.
-2. Remote Login with a dedicated public key.
-3. macOS Screen Sharing for one named user.
-4. A persistent virtual screen for software-only headless use.
+1. Remote Login with a dedicated public key provides deterministic shell
+   access if the vendor terminal agent is unavailable.
+2. macOS Screen Sharing provides a LAN-only visual fallback.
+3. A persistent virtual screen can address a separately reproduced resolution,
+   capture, or framebuffer problem.
 
-BetterDisplay officially supports virtual screens for headless Macs. On macOS
-13.2 or later:
+Only for such a display-specific problem, BetterDisplay officially supports
+virtual screens on macOS 13.2 or later:
 
 ```bash
 brew install --cask betterdisplay
@@ -124,29 +128,25 @@ open -a BetterDisplay
 /Applications/BetterDisplay.app/Contents/MacOS/BetterDisplay help
 ```
 
-Create one `1920x1080` virtual screen named `UU-Headless`, enable BetterDisplay
-at login, reboot with the monitor still attached, and verify:
+Create only the virtual screen needed for the reproduced issue and verify it:
 
 ```bash
 /usr/sbin/system_profiler SPDisplaysDataType
 ```
 
-Then unplug the monitor and test UU video, input, terminal, SSH, and Screen
-Sharing independently. BetterDisplay's current CLI supports
+Test UU video, input, terminal, SSH, and Screen Sharing independently.
+BetterDisplay's current CLI supports
 `create -type=VirtualScreen`, `virtualScreenName`, `resolutionList`,
 `virtualScreenHiDPI`, and `connected`. Query the installed version's help
 before scripting them. Never run its unqualified `discard` operation.
-
-A display-emulator plug remains the lowest-maintenance fallback because it
-does not depend on a login item, app startup, or virtual-screen state.
 
 ## Troubleshooting Matrix
 
 | Observation | Meaning | Next step |
 | --- | --- | --- |
 | Device offline | UU host heartbeat absent | Check power, LAN, login, and UU startup |
-| Online, terminal timeout | UU service reachable, agent did not open | Restore display or independent SSH/Screen Sharing |
-| Terminal works, GUI blank | Shell path healthy, framebuffer unhealthy | Inspect displays and virtual-screen state |
+| Online, terminal timeout | UU service reachable, terminal agent did not open | Test GUI separately; inspect agent/version state or use optional SSH |
+| Terminal works, GUI blank | Shell path healthy, capture path unhealthy | Inspect permissions and display state for the reproduced failure |
 | GUI renders, no input | Capture healthy, control permission/path unhealthy | Recheck Accessibility and UU input |
 | CLI exits `2` | Ubuntu controller IPC unavailable | Check `uu-remote-bridge.service` |
 | CLI exits `5` | Vendor operation timed out | Inspect state before retrying |

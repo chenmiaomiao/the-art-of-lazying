@@ -32,8 +32,8 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - use the official UU controller CLI without hard-coded Wine or display paths
   - open bounded macOS terminal-agent sessions for Xcode and simulator checks
   - distinguish device heartbeat, terminal, framebuffer, and input health
-  - recover a 7050 iMac for monitor-free UU access with independent SSH,
-    Screen Sharing, and a persistent virtual display
+  - record repeated monitor-free UU GUI success on the 7050 iMac while keeping
+    terminal-agent and optional recovery paths separate
 
 - [native-gnome-rdp-vs-xrdp-on-ubuntu-24-04.md](./native-gnome-rdp-vs-xrdp-on-ubuntu-24-04.md)
   - why GNOME native RDP could crash the remote desktop session on app launch
