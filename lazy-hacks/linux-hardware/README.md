@@ -14,3 +14,8 @@ Operational notes for workstation hardware that needs small Linux-side fixes.
   - detect a USB webcam
   - grant immediate RDP-session access without logout/reboot
   - preview the camera with `ffplay`
+- [ubuntu-memory-pressure-freeze-prevention.md](./ubuntu-memory-pressure-freeze-prevention.md)
+  - diagnose a freeze from retained Gradle and Kotlin memory with `atop`
+  - shorten daemon lifetime and cap Kotlin/Gradle concurrency
+  - add swap, `systemd-oomd`, and UU service containment without closing
+    healthy remote sessions

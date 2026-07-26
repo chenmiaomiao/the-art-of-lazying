@@ -28,6 +28,13 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - descriptive RDP-broker and direct-X11 behavior tags for cross-machine handoff
   - reboot-persistent daily checks and resumable Codex repair without restarting a healthy relay
 
+- [uu-remote-agent-and-headless-mac.md](./uu-remote-agent-and-headless-mac.md)
+  - use the official UU controller CLI without hard-coded Wine or display paths
+  - open bounded macOS terminal-agent sessions for Xcode and simulator checks
+  - distinguish device heartbeat, terminal, framebuffer, and input health
+  - recover a 7050 iMac for monitor-free UU access with independent SSH,
+    Screen Sharing, and a persistent virtual display
+
 - [native-gnome-rdp-vs-xrdp-on-ubuntu-24-04.md](./native-gnome-rdp-vs-xrdp-on-ubuntu-24-04.md)
   - why GNOME native RDP could crash the remote desktop session on app launch
   - why `xrdp` was chosen as the safer default
