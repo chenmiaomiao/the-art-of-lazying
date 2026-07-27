@@ -98,29 +98,28 @@ agent times out or its GUI connection remains blank.
 
 ## Headless 7050 iMac
 
-The operator connected to the 7050 iMac successfully several times through UU
-after its monitor was unplugged. Its UU GUI is therefore verified to work
-headlessly without a dummy plug or virtual display.
+The operator clarified that several monitor-free connections were attempts,
+not successful sessions. Each remained at route optimization. Fresh controller
+logs showed that signaling and TURN completed, but:
 
-One earlier UU terminal-agent attempt timed out waiting for the remote open
-response, while LAN SSH and macOS Screen Sharing were not listening. That is a
-separate terminal-agent observation; it does not indicate a failure of UU
-video, input, or headless operation.
+- the Mac reported one screen with zero physical and zero virtual screens;
+- every video stream remained `0x0`, `0 bps`, and at zero decoded frames;
+- the UU terminal agent timed out waiting for the remote open response;
+- LAN SSH and macOS Screen Sharing refused connections.
 
-This evidence supersedes the earlier missing-display diagnosis. Do not
-reconnect a monitor, install BetterDisplay, or add a dummy plug solely to make
-UU work when the headless GUI is already usable.
+The host is reachable, but it currently has neither a usable framebuffer nor
+an independent command path. Temporarily reconnect a monitor or insert a
+display-emulator plug. Once UU renders:
 
-Optional resilience paths can still be useful:
+1. Enable Remote Login and install a dedicated public key.
+2. Install BetterDisplay and create one persistent `1920x1080` virtual screen
+   named `UU-Headless`.
+3. Configure BetterDisplay to start at GUI login.
+4. Reboot once with the temporary display attached.
+5. Remove it and separately verify UU video, input, terminal, and keyed SSH.
 
-1. Remote Login with a dedicated public key provides deterministic shell
-   access if the vendor terminal agent is unavailable.
-2. macOS Screen Sharing provides a LAN-only visual fallback.
-3. A persistent virtual screen can address a separately reproduced resolution,
-   capture, or framebuffer problem.
-
-Only for such a display-specific problem, BetterDisplay officially supports
-virtual screens on macOS 13.2 or later:
+BetterDisplay officially supports virtual screens for headless remote access
+on macOS 13.2 or later:
 
 ```bash
 brew install --cask betterdisplay
@@ -128,13 +127,18 @@ open -a BetterDisplay
 /Applications/BetterDisplay.app/Contents/MacOS/BetterDisplay help
 ```
 
-Create only the virtual screen needed for the reproduced issue and verify it:
+The bridge submodule includes a guarded Mac-side bootstrap:
 
 ```bash
-/usr/sbin/system_profiler SPDisplaysDataType
+cd ~/Projects/the-art-of-lazying
+./code/uu-remote-ubuntu-bridge/scripts/bootstrap-headless-macos.sh
+./code/uu-remote-ubuntu-bridge/scripts/bootstrap-headless-macos.sh --execute
 ```
 
-Test UU video, input, terminal, SSH, and Screen Sharing independently.
+It is read-only without `--execute`. Remote Login and public-key installation
+require separate explicit flags, and the script never accepts or stores a
+password.
+
 BetterDisplay's current CLI supports
 `create -type=VirtualScreen`, `virtualScreenName`, `resolutionList`,
 `virtualScreenHiDPI`, and `connected`. Query the installed version's help
@@ -145,8 +149,9 @@ before scripting them. Never run its unqualified `discard` operation.
 | Observation | Meaning | Next step |
 | --- | --- | --- |
 | Device offline | UU host heartbeat absent | Check power, LAN, login, and UU startup |
-| Online, terminal timeout | UU service reachable, terminal agent did not open | Test GUI separately; inspect agent/version state or use optional SSH |
-| Terminal works, GUI blank | Shell path healthy, capture path unhealthy | Inspect permissions and display state for the reproduced failure |
+| Online, terminal timeout | UU service reachable, terminal agent did not open | Test GUI separately; use keyed SSH if already enabled |
+| GUI remains optimizing; video stays `0x0` | Signaling works but no framebuffer arrives | Temporarily attach a display, then configure a persistent virtual screen |
+| Terminal works, GUI blank | Shell path healthy, capture path unhealthy | Inspect permissions and display state |
 | GUI renders, no input | Capture healthy, control permission/path unhealthy | Recheck Accessibility and UU input |
 | CLI exits `2` | Ubuntu controller IPC unavailable | Check `uu-remote-bridge.service` |
 | CLI exits `5` | Vendor operation timed out | Inspect state before retrying |

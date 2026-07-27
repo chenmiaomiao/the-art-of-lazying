@@ -208,6 +208,24 @@ directory. The token is inherited through process environments rather than
 stored in configuration or exposed in the command line. Logs contain counts,
 route, timing, and result only—never keycodes or typed text.
 
+## Video Works but Nothing Can Control Ubuntu
+
+UU controller or terminal-agent diagnostics can leave the UU GUI active on the
+private Xvfb display instead of the full-screen `Ubuntu-Desktop-Relay`. Video
+continues, but the broker reports `focus=timeout`, `result=0`, and `error=21`,
+so pointer and keyboard events are rejected.
+
+Recover without restarting the bridge:
+
+```bash
+uu-agent focus 'Ubuntu-Desktop-Relay'
+```
+
+The supervised launcher now checks the private active window once per second
+and restores the relay automatically. This guard affects only Wine's private
+display, not the physical GNOME desktop. After reconnecting, require fresh
+broker records with `focus=ready`, matching counts, and `error=0`.
+
 ## Installation and Route Selection
 
 The conservative install remains:
