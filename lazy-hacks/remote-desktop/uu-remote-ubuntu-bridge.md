@@ -2,16 +2,17 @@
 
 ## Result
 
-The accepted official Windows UU Remote 4.34.0.8979 client now runs in a dedicated Wine
-prefix and can display and control a logged-in Ubuntu 24.04 GNOME desktop,
-including Wayland and XRDP/Xorg targets. This is an experimental,
+The audited official Windows UU Remote 4.33.0.8907 client runs in a dedicated
+Wine prefix and can display and control a logged-in Ubuntu 24.04 GNOME
+desktop, including Wayland and XRDP/Xorg targets. This is an experimental,
 version-locked compatibility bridge, not a native Linux port.
 
-The production workstation was upgraded in place from 4.33.0.8907 through a
-complete-prefix, login-preserving transaction. The accepted installer passed
-two runtime checks separated by its stability interval, retained the existing
-UU account and direct-X11 keyboard profile, and did not restart or reconfigure
-XRDP.
+A guarded 4.34.0.8979 promotion preserved the account and passed warm checks,
+but a later cold start exposed an accumulated Wine device-registry stall. The
+complete 4.33 prefix was restored without restarting XRDP, and 4.34 acceptance
+was withdrawn. The real cause affected both versions and is now repaired
+transactionally; see
+[Repair UU Remote Stuck at “Finding Routes”](./uu-remote-finding-routes-wine-registry-repair.md).
 
 The backward-compatible `v0.2.0` release fixes the difficult fast-typing case
 seen on one XRDP workstation. Physical UU keyboard input can bypass the lossy
@@ -350,6 +351,7 @@ key, production log, or desktop screenshot is committed.
 ```bash
 uu-remote status
 uu-remote restart
+uu-remote repair-registry
 uu-remote logs
 uu-remote upgrade status
 uu-remote upgrade check
@@ -419,10 +421,21 @@ plus the selected X11 helper. All code/data differences still fail. A blocked
 transaction can be retried only after its pinned tooling commit changes, and
 the failed task is retained rather than silently recycled.
 
-The corrected run upgraded to 4.34.0.8979, preserved account state and the
-8 ms text / 0 ms physical / direct-X11 profile, kept XRDP's active process
-unchanged, and passed all 84 tests plus both live runtime checks. The reusable
-procedure and private rollback locations are documented in
+The corrected promotion machinery preserved account state, the 8 ms text /
+0 ms physical / direct-X11 profile, and XRDP. A later cold-start failure
+showed that those checks were still incomplete: 527 failed virtual-input roots
+and 21,894 retained Wine Bluetooth devices made UU scan at about 190% CPU
+before signaling. Restoring 4.33 reproduced the scan, proving that accumulated
+prefix state—not only the new executable—was responsible.
+
+The scoped repair reduced `system.reg` from 34.4 MB to about 3.9 MB;
+`update_gvinput` then completed in milliseconds and signaling followed about
+four seconds later. Current verification requires those milestones from the
+current service start. Version 4.34 remains statically reviewed but has no
+promotion acceptance until it passes the new stopped-prefix test. Full
+evidence and recovery commands are in
+[the finding-routes incident guide](./uu-remote-finding-routes-wine-registry-repair.md)
+and the reusable transaction is documented in
 [`docs/reusable-upgrade.md`](../../code/uu-remote-ubuntu-bridge/docs/reusable-upgrade.md).
 
 ## Upstream Updates
@@ -463,7 +476,7 @@ cd code/uu-remote-ubuntu-bridge
 git fetch --tags origin
 ./scripts/configure-updater.sh enable --track TRACK_NAME \
   --model codex-auto-review --reasoning-effort medium \
-  --auto-promote-accepted
+  --no-auto-reinstall --no-auto-promote
 uu-remote update
 ```
 
@@ -488,6 +501,12 @@ failure, and another-computer instructions are in
 [`docs/automatic-updates.md`](../../code/uu-remote-ubuntu-bridge/docs/automatic-updates.md)
 and
 [`docs/release-tracks.md`](../../code/uu-remote-ubuntu-bridge/docs/release-tracks.md).
+
+`--auto-promote-accepted` remains an explicit operator option, but it should
+be enabled only after the exact release has passed the stopped-prefix startup,
+fresh-signaling, controller-input, login-preservation, and stability gates.
+The production workstation currently leaves both automatic reinstall and
+automatic promotion disabled.
 
 Restore the audited upstream files while keeping UU account state:
 

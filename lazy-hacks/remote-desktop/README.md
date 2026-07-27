@@ -30,6 +30,14 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - the reusable guarded 4.33-to-4.34 upgrade, preserved login/input profile,
     XRDP-independent transaction, and complete-prefix rollback
 
+- [uu-remote-finding-routes-wine-registry-repair.md](./uu-remote-finding-routes-wine-registry-repair.md)
+  - why “finding routes” was a local pre-signaling device scan rather than a
+    DNS, Ethernet, firewall, or XRDP failure
+  - evidence from 527 stale virtual-input roots and 21,894 retained Wine
+    Bluetooth devices
+  - the idempotent `uu-remote repair-registry` transaction, private rollback,
+    exact cold-start verification, and fail-closed release-acceptance rule
+
 - [uu-remote-agent-and-headless-mac.md](./uu-remote-agent-and-headless-mac.md)
   - use the official UU controller CLI without hard-coded Wine or display paths
   - open bounded macOS terminal-agent sessions for Xcode and simulator checks
