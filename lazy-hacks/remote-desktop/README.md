@@ -30,6 +30,14 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - the reusable guarded 4.33-to-4.34 upgrade, preserved login/input profile,
     XRDP-independent transaction, and complete-prefix rollback
 
+- [uu-remote-safe-upgrade-runbook.md](./uu-remote-safe-upgrade-runbook.md)
+  - distinguish a public bridge-source refresh from proprietary UU promotion
+  - preserve login, keyboard route, XRDP, and complete-prefix rollback
+  - explain why the warm 4.34 promotion succeeded but its later cold-start
+    acceptance was withdrawn
+  - use the current read-only check, accepted apply, post-upgrade controller
+    test, and conservative automatic-maintenance commands
+
 - [uu-remote-finding-routes-wine-registry-repair.md](./uu-remote-finding-routes-wine-registry-repair.md)
   - why “finding routes” was a local pre-signaling device scan rather than a
     DNS, Ethernet, firewall, or XRDP failure
