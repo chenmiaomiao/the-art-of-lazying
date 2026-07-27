@@ -2,10 +2,16 @@
 
 ## Result
 
-The official Windows UU Remote 4.33.0.8907 client now runs in a dedicated Wine
+The accepted official Windows UU Remote 4.34.0.8979 client now runs in a dedicated Wine
 prefix and can display and control a logged-in Ubuntu 24.04 GNOME desktop,
 including Wayland and XRDP/Xorg targets. This is an experimental,
 version-locked compatibility bridge, not a native Linux port.
+
+The production workstation was upgraded in place from 4.33.0.8907 through a
+complete-prefix, login-preserving transaction. The accepted installer passed
+two runtime checks separated by its stability interval, retained the existing
+UU account and direct-X11 keyboard profile, and did not restart or reconfigure
+XRDP.
 
 The backward-compatible `v0.2.0` release fixes the difficult fast-typing case
 seen on one XRDP workstation. Physical UU keyboard input can bypass the lossy
@@ -330,6 +336,10 @@ The public submodule contains the complete source and operational record:
 - `scripts/patch-gameviewer.py`: generic fail-closed patch, verify, and restore CLI
 - `scripts/test-x11-phone-text.sh`: isolated Xvfb/Wine phone-text route and
   exact-order acceptance test
+- `scripts/upgrade-uu-remote.sh`: reusable source pull, accepted product
+  promotion, bridge refresh, verification, and rollback-safe entry point
+- `docs/reusable-upgrade.md`: exact command contract, snapshots, persistent
+  user-bus behavior, live failure lessons, and another-computer handoff
 - `install.sh`: complete from-scratch setup
 
 No NetEase binary, Wine prefix, account token, device ID, password, private
@@ -341,9 +351,18 @@ key, production log, or desktop screenshot is committed.
 uu-remote status
 uu-remote restart
 uu-remote logs
+uu-remote upgrade status
+uu-remote upgrade check
+uu-remote upgrade apply
 scripts/verify.sh --quick
 scripts/verify.sh
 ```
+
+Use `uu-remote upgrade apply --now` only when a short, deliberate UU
+interruption is acceptable. It bypasses the idle delay, not the installer
+hash, acceptance, prefix snapshot, account comparison, two runtime checks,
+XRDP boundary, or rollback gates. Installed commands live in
+`~/.local/bin`; keep that standard directory in `PATH`.
 
 The quick verifier must identify the active route. For this Xorg fix it reports:
 
@@ -381,6 +400,31 @@ The wording is intentionally “strong practical acceptance,” not a universal
 zero-loss promise. The bounded diagnostics cannot reconstruct typed content,
 and UU's controller/network remains outside the host's control.
 
+## Production Upgrade Lessons
+
+The first guarded 4.34 attempts failed closed and left 4.33 usable. They found
+three tooling defects rather than a bad accepted UU build:
+
+1. a detached promotion checkout had not built its health-stub verifier;
+2. MinGW inserted a PE timestamp/checksum, so equivalent local verifier builds
+   did not have identical whole-file hashes; and
+3. systemd marked the `Type=simple` bridge active before GNOME RDP had opened
+   port 3390, while stale Wine process names let the old readiness loop proceed
+   too early.
+
+The reusable updater now builds its verifier inside the pinned checkout, makes
+new PE builds reproducible, compares legacy stubs after normalizing only the
+documented timestamp/checksum fields, and waits for the actual GNOME listener
+plus the selected X11 helper. All code/data differences still fail. A blocked
+transaction can be retried only after its pinned tooling commit changes, and
+the failed task is retained rather than silently recycled.
+
+The corrected run upgraded to 4.34.0.8979, preserved account state and the
+8 ms text / 0 ms physical / direct-X11 profile, kept XRDP's active process
+unchanged, and passed all 84 tests plus both live runtime checks. The reusable
+procedure and private rollback locations are documented in
+[`docs/reusable-upgrade.md`](../../code/uu-remote-ubuntu-bridge/docs/reusable-upgrade.md).
+
 ## Upstream Updates
 
 Unknown UU binaries remain blocked. A new version follows this workflow:
@@ -407,8 +451,8 @@ Describe the validated input behavior instead of calling the two machines
 
 | Behavior tag | Host profile |
 | --- | --- |
-| `track-rdp-broker-v1` | Keep the compatible broker and nested RDP keyboard route on a computer where it is already smooth |
-| `track-direct-x11-v1` | Keep direct physical-key and normalized phone-text injection on a validated X11/XRDP computer |
+| `track-rdp-broker-20260724` | Keep the compatible broker and nested RDP keyboard route on a computer where it is already smooth |
+| `track-direct-x11-20260724` | Keep direct physical-key and normalized phone-text injection on a validated X11/XRDP computer |
 
 Both immutable tags use the union source; the saved route and timing settings
 select the behavior. The daily checker never switches profiles. Enable it only
@@ -418,7 +462,8 @@ after the normal phone and computer-keyboard acceptance passes:
 cd code/uu-remote-ubuntu-bridge
 git fetch --tags origin
 ./scripts/configure-updater.sh enable --track TRACK_NAME \
-  --model gpt-5.6-sol --reasoning-effort xhigh
+  --model codex-auto-review --reasoning-effort medium \
+  --auto-promote-accepted
 uu-remote update
 ```
 
@@ -428,11 +473,11 @@ ETag, size, and cached hash make later checks metadata-only. A healthy UU relay
 is never restarted by this check.
 
 `uu-remote-repair-monitor.timer` performs a read-only health check every 15
-minutes. It restarts only after the relay is unhealthy twice and snapshots the
-deployed runtime before a known-good reinstall. Failed readiness restores the
-snapshot. For an unknown upstream build or a persistent runtime fault, it
+minutes. The default profile records and analyzes a persistent fault without
+restarting the live bridge; live restart/reinstall requires a separate
+explicit opt-in. For an unknown upstream build or a persistent runtime fault, it
 creates a private repair clone and starts Codex with explicit
-`gpt-5.6-sol`/`xhigh` settings. The Codex thread UUID, context, events, and test
+`codex-auto-review`/`medium` settings. The Codex thread UUID, context, events, and test
 result are saved atomically, so the same task resumes after reboot or network
 interruption with bounded backoff.
 

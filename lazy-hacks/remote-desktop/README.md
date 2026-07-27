@@ -27,6 +27,8 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - the versioned manifest, sandboxed staging, and audited upstream-update workflow
   - descriptive RDP-broker and direct-X11 behavior tags for cross-machine handoff
   - reboot-persistent daily checks and resumable Codex repair without restarting a healthy relay
+  - the reusable guarded 4.33-to-4.34 upgrade, preserved login/input profile,
+    XRDP-independent transaction, and complete-prefix rollback
 
 - [uu-remote-agent-and-headless-mac.md](./uu-remote-agent-and-headless-mac.md)
   - use the official UU controller CLI without hard-coded Wine or display paths
