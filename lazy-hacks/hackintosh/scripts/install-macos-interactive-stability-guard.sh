@@ -127,10 +127,10 @@ case "${free_kb:-}" in
 esac
 
 uu_count=$(
-  ps -axo uid=,command= |
+  ps -axo uid=,comm= |
     awk -v uid="$(id -u)" '
       $1 == uid &&
-      ($0 ~ /UURemoteService -agent/ || $0 ~ /UURemoteServer/) {
+      ($2 ~ /\/UURemoteService$/ || $2 ~ /\/UURemoteServer$/) {
         count++
       }
       END {
