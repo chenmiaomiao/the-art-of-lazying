@@ -4,6 +4,12 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
 
 ## Files
 
+- [OptiPlex 3040 macOS post-install and Sequoia staging](../hackintosh/optiplex-3040-macos-postinstall-and-sequoia-staging.md)
+  - install signed native UU Remote and configure its required macOS consent
+  - establish separate key-only SSH identities for macOS and Windows on the same hardware
+  - enable LAN-only Apple Remote Management and persistent never-sleep behavior
+  - stage, verify, and explicitly defer the Sequoia upgrade
+
 - [windows-rdp-bootstrap-to-ssh-and-uu-remote.md](./windows-rdp-bootstrap-to-ssh-and-uu-remote.md)
   - how Remmina RDP was used as the one-time Windows bootstrap path
   - how to install OpenSSH Server, add an administrator public key, and keep TCP 22 LAN-scoped
