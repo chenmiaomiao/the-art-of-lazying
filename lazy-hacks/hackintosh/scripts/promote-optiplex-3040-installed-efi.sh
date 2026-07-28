@@ -174,9 +174,38 @@ timeout=$(
     -c "Print :Misc:Boot:Timeout" \
     "$candidate/OC/config.plist"
 )
-if [ "$show_picker" != "true" ] || [ "$timeout" != "8" ]; then
+hide_auxiliary=$(
+  /usr/libexec/PlistBuddy \
+    -c "Print :Misc:Boot:HideAuxiliary" \
+    "$candidate/OC/config.plist"
+)
+picker_mode=$(
+  /usr/libexec/PlistBuddy \
+    -c "Print :Misc:Boot:PickerMode" \
+    "$candidate/OC/config.plist"
+)
+picker_variant=$(
+  /usr/libexec/PlistBuddy \
+    -c "Print :Misc:Boot:PickerVariant" \
+    "$candidate/OC/config.plist"
+)
+if [ "$show_picker" != "true" ] ||
+   [ "$timeout" != "5" ] ||
+   [ "$hide_auxiliary" != "false" ] ||
+   [ "$picker_mode" != "External" ] ||
+   [ "$picker_variant" != 'Acidanthera\GoldenGate' ]; then
   fail "candidate is not the reviewed installed-system picker profile"
 fi
+grep -Fq "OpenCanopy.efi" "$manifest" ||
+  fail "candidate manifest does not contain OpenCanopy.efi"
+[ -f "$candidate/BOOT/.contentVisibility" ] ||
+  fail "candidate does not hide the recursive fallback-loader entry"
+[ "$(cat "$candidate/BOOT/.contentVisibility")" = "Disabled" ] ||
+  fail "fallback-loader visibility must be exactly Disabled"
+grep -Fq "Resources/Image/Acidanthera/GoldenGate/Apple.icns" "$manifest" ||
+  fail "candidate manifest does not contain the GoldenGate Apple icon"
+grep -Fq "Resources/Image/Acidanthera/GoldenGate/Windows.icns" "$manifest" ||
+  fail "candidate manifest does not contain the GoldenGate Windows icon"
 grep -Fq "OpenLegacyBoot.efi" "$manifest" ||
   fail "candidate manifest does not contain OpenLegacyBoot.efi"
 grep -Fq "OpenNtfsDxe.efi" "$manifest" ||
