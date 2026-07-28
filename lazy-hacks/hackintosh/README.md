@@ -26,6 +26,13 @@ private keys, and complete EFI trees outside this public repository.
     candidate on the 1 TB data disk without starting an upgrade;
   - audit Windows 11 blockers and stage only Microsoft-signed readiness tools
     without running them.
+- [OptiPlex 3040 and 7050 macOS stability](./macos-remote-stability-3040-7050.md)
+  - distinguish a crash from an alive but overloaded remote desktop;
+  - audit panic, GPU, power, memory, APFS, update, and UU evidence;
+  - prevent unattended major macOS updates while retaining security data;
+  - deprioritize runaway iCloud and Photos workers without disabling them;
+  - diagnose the 7050 optical SATA fault and stage a guarded SSD TRIM fix;
+  - verify Monterey as the 3040's persistent OpenCore default.
 
 ## Boundary
 

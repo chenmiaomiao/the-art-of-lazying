@@ -763,6 +763,15 @@ Use the supported picker action once instead:
 enabled for this operation. Selecting Windows with ordinary Enter must not
 change the saved default.
 
+The 2026-07-28 live verification found `ShowPicker=true`, `Timeout=5`,
+`AllowSetDefault=true`, and `PickerMode=External`. The saved NVRAM target
+resolved exactly to the Monterey APFS volume group and its Preboot
+`boot.efi`; no Recovery or one-time boot override was present.
+
+For the separate investigation of remote stalls, automatic major updates, UU
+wakeups, iCloud and Photos load, and the reversible stability guard, see
+[OptiPlex 3040 and 7050 macOS stability](./macos-remote-stability-3040-7050.md).
+
 ## Acceptance Checks
 
 ```bash
