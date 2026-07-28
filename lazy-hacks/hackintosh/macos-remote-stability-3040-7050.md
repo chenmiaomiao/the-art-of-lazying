@@ -89,9 +89,8 @@ every two minutes:
 - records free space, WindowServer, VNC, UU process count, and the busiest
   covered background worker;
 - warns below 25 GiB free;
-- leaves an active UU session untouched;
-- restarts the signed UU user LaunchAgent only after its processes are absent
-  for three consecutive checks;
+- records UU process presence but leaves startup and repair to the dedicated
+  unattended supervisor;
 - rotates its own log at 1 MiB.
 
 This does not disable iCloud or Photos analysis. It lets those services
@@ -108,6 +107,59 @@ The live controls reduce software contention; they do not remove the 7050's
 hardware-port loop or create disk space. The remaining maintenance priorities
 are to disable or repair optical `SATA-1`, keep at least 25 GiB free, and
 activate the reviewed TRIM candidate only during a planned restart.
+
+## Unattended UU Startup
+
+UU Remote has two native launchd jobs: a root daemon loaded at boot and a
+per-user agent loaded into the macOS GUI session. A controllable Aqua desktop
+does not exist until a user session starts. On the 7050, `autoLoginUser` is
+already `lachlan` and FileVault is off, so macOS can create that session
+without a post-reboot keyboard action. The installer audits these facts but
+never creates an auto-login password or changes FileVault.
+
+Install the companion scripts from the same directory:
+
+```bash
+./install-macos-uuremote-unattended.sh audit
+./install-macos-uuremote-unattended.sh \
+  install UU-UNATTENDED-STARTUP
+```
+
+The root supervisor starts at boot and checks every 30 seconds. It:
+
+- validates the signed UU app and expected Team ID before any repair;
+- repairs a missing root daemon and enables the native jobs;
+- waits through a 60-second boot grace, then repairs a missing Aqua agent
+  after two consecutive checks;
+- uses `uuyc-cli status`, not incidental cloud sockets, to verify login,
+  network, and XPC health;
+- waits through five unhealthy CLI checks and validates external connectivity
+  before restarting a running agent;
+- checks `uuyc-cli device status` and extra established sockets before acting,
+  so an active remote session is left alone;
+- removes only a stale root loginwindow agent after the real Aqua user appears;
+- preserves UU credentials, device identity, TCC permissions, and both signed
+  vendor plists;
+- rotates its 2 MiB log and writes a credential-free heartbeat.
+
+The 7050 installer migrated the earlier machine-specific watchdog into a
+timestamped root-only backup. It did not restart the healthy UU processes.
+The generic supervisor is the sole UU repair owner; the two-minute
+interactive stability guard now only monitors UU.
+
+Audit after an in-app UU update and after the next planned reboot:
+
+```bash
+./install-macos-uuremote-unattended.sh audit
+sudo launchctl print system/com.lachlan.macos-uuremote-unattended
+sudo cat /var/db/com.lachlan.macos-uuremote-unattended/heartbeat
+sudo tail -n 50 /var/log/macos-uuremote-unattended.log
+```
+
+An installed supervisor is not a substitute for an Aqua session. If
+`auto_login_user=disabled`, either log in locally after reboot or configure
+auto-login through macOS System Settings after considering the physical
+security tradeoff. Do not put a login password in these scripts.
 
 ## 7050 Storage Maintenance
 
@@ -177,6 +229,7 @@ Copy these scripts to the Mac and run them as the logged-in desktop user:
   apply MACOS-STABILITY-POLICY
 ./install-macos-interactive-stability-guard.sh install
 ./install-macos-interactive-stability-guard.sh audit
+./install-macos-uuremote-unattended.sh audit
 ```
 
 The policy script requests administrator authentication once in `apply`

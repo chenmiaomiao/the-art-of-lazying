@@ -232,6 +232,22 @@ Repair only when the audit reports `LoginWindow` or a root agent:
 Source:
 [enforce-uuremote-aqua-session-macos.sh](./scripts/enforce-uuremote-aqua-session-macos.sh)
 
+For unattended post-login startup and health repair, install the generic
+supervisor:
+
+```bash
+./install-macos-uuremote-unattended.sh \
+  install UU-UNATTENDED-STARTUP
+```
+
+It does not change `LimitLoadToSessionType`, account state, or TCC. When an
+Aqua user is present, it removes only a stale root loginwindow instance and
+supervises the user's signed agent with UU's own CLI status. Keep the
+Aqua-only repair for the specific duplicate-desktop symptom described above;
+do not apply it merely because the vendor plist supports `LoginWindow`.
+Operational details and reboot checks are in
+[OptiPlex 3040 and 7050 macOS stability](./macos-remote-stability-3040-7050.md#unattended-uu-startup).
+
 ## Apple Remote Desktop and VNC
 
 The post-install script configures Apple's native Remote Management service

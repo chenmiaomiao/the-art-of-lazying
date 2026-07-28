@@ -31,6 +31,8 @@ private keys, and complete EFI trees outside this public repository.
   - audit panic, GPU, power, memory, APFS, update, and UU evidence;
   - prevent unattended major macOS updates while retaining security data;
   - deprioritize runaway iCloud and Photos workers without disabling them;
+  - start and supervise signed UU Remote jobs after unattended macOS reboots
+    without changing account or privacy state;
   - diagnose the 7050 optical SATA fault and stage a guarded SSD TRIM fix;
   - verify Monterey as the 3040's persistent OpenCore default.
 

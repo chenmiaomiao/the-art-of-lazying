@@ -79,12 +79,10 @@ export PATH="/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
 
 readonly LABEL="com.lachlan.macos-interactive-stability-guard"
 readonly LOG="$HOME/Library/Logs/MacInteractiveStabilityGuard.log"
-readonly STATE_DIR="$HOME/Library/Application Support/$LABEL"
-readonly UU_MISS_FILE="$STATE_DIR/uu-misses"
 readonly MAX_LOG_BYTES=1048576
 readonly MIN_FREE_GB=25
 
-mkdir -p "$STATE_DIR" "$(dirname "$LOG")"
+mkdir -p "$(dirname "$LOG")"
 if [ -f "$LOG" ] &&
    [ "$(stat -f '%z' "$LOG" 2>/dev/null || printf 0)" -gt \
      "$MAX_LOG_BYTES" ]; then
@@ -138,25 +136,6 @@ uu_count=$(
       }
     '
 )
-
-if [ "$uu_count" -eq 0 ] && [ -d /Applications/UURemote.app ]; then
-  misses=$(cat "$UU_MISS_FILE" 2>/dev/null || printf 0)
-  case "$misses" in
-    '' | *[!0-9]*) misses=0 ;;
-  esac
-  misses=$((misses + 1))
-  printf '%s\n' "$misses" > "$UU_MISS_FILE"
-  if [ "$misses" -ge 3 ]; then
-    launchctl kickstart -k \
-      "gui/$(id -u)/com.netease.uuremote.agent" \
-      >/dev/null 2>&1 ||
-      true
-    printf '0\n' > "$UU_MISS_FILE"
-    log "action=kickstart-uuremote reason=missing-three-checks"
-  fi
-else
-  printf '0\n' > "$UU_MISS_FILE"
-fi
 
 windowserver=down
 pgrep -x WindowServer >/dev/null 2>&1 && windowserver=up
