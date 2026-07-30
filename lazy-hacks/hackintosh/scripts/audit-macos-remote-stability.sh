@@ -85,7 +85,14 @@ lsof -nP -iTCP:5900 -sTCP:LISTEN 2>/dev/null || true
 
 section "Hackintosh extensions"
 kmutil showloaded 2>/dev/null |
-  grep -Ei 'Lilu|WhateverGreen|AppleALC|IntelMausi|NVMeFix|RestrictEvents' ||
+  grep -Ei \
+    'Lilu|WhateverGreen|AppleALC|IntelMausi|NVMeFix|RestrictEvents|AppleIntel(SKL|KBL)Graphics' ||
+  true
+nvram boot-args 2>/dev/null || true
+ioreg -l -w0 -r -c AppleIntelFramebufferController 2>/dev/null |
+  grep -E \
+    '"AAPL,ig-platform-id"|"device-id"|"model"|"IOName"|"IOPowerManagement"' |
+  head -n 80 ||
   true
 
 section "software update state"
@@ -166,7 +173,7 @@ awk '
 rm -f "$storage_sample"
 trap - EXIT
 
-section "kernel shutdown, watchdog, GPU, and memory events"
+section "kernel shutdown, watchdog, framebuffer, GPU, and memory events"
 set +e
 run_with_timeout 20 /usr/bin/log show \
   --last "${hours}h" \
@@ -175,6 +182,9 @@ run_with_timeout 20 /usr/bin/log show \
   'process == "kernel" AND
    (eventMessage CONTAINS[c] "shutdown cause" OR
     eventMessage CONTAINS[c] "userspace watchdog timeout" OR
+    eventMessage CONTAINS[c] "TxnHang" OR
+    eventMessage CONTAINS[c] "Fake VBL" OR
+    eventMessage CONTAINS[c] "Skipped flip" OR
     eventMessage CONTAINS[c] "GPU Restart" OR
     eventMessage CONTAINS[c] "GPU panic" OR
     eventMessage CONTAINS[c] "memory pressure")' \

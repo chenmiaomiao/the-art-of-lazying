@@ -70,8 +70,20 @@ The development toolchain uses:
 | nvm | pinned `0.40.4` archive and SHA-256 |
 | Node.js | release line `22`, compatible with Intel Monterey |
 | Codex CLI | current stable `@openai/codex` npm tag |
+| Codex desktop | official app installed by `codex app`; OpenAI Team ID verified |
 
 Node and Codex are installed under `~/.nvm`; do not use `sudo npm install -g`.
+On 2026-07-30 the live machine verified Node `22.23.1`, npm `10.9.8`,
+Codex CLI `0.146.0`, and signed Codex desktop build `26.721.81911`. These
+version numbers are an evidence snapshot, not repository pins.
+
+The 3040 later reproduced display flashing while the Electron GPU path was
+active. An Electron `--disable-gpu` test avoided that path but drove the main
+process to 86-100 percent of one CPU core and generated a macOS `cpu_resource`
+diagnostic, so the software-rendering launcher was removed. Until a native
+HD 530 candidate passes, use the verified text-only `Codex CLI.command`
+launcher described in
+[the stability runbook](./macos-remote-stability-3040-7050.md).
 
 The additional reviewed desktop applications installed on Monterey are:
 
@@ -146,6 +158,7 @@ run:
   --uu-package ~/Downloads/uuyc_4.33.0.pkg \
   --authorized-key ~/Downloads/authorized_key.pub \
   --peer-host <ubuntu-ip> \
+  --codex-desktop \
   --vnc-password
 ```
 
@@ -167,7 +180,9 @@ The script:
   configuration-data updates enabled;
 - verifies and installs UU Remote, then restricts its per-user agent to the
   visible Aqua console;
-- installs pinned nvm, Node 22, and the current stable Codex CLI.
+- installs pinned nvm, Node 22, and the current stable Codex CLI;
+- optionally uses the installed CLI to fetch the official Codex desktop app,
+  then verifies the `com.openai.codex` identifier and OpenAI Team ID.
 
 ## UU Remote Consent
 
@@ -402,7 +417,8 @@ The installed profile:
 - takes `OpenCanopy.efi` from the exact same OpenCore 1.0.7 package as
   `OpenCore.efi`;
 - leaves `LauncherOption=Disabled` during staging;
-- adds OpenCore 1.0.7 `OpenLegacyBoot.efi`;
+- carries OpenCore 1.0.7 `OpenLegacyBoot.efi` for the historical MBR layout;
+  the post-conversion repair disables that driver in the live config;
 - adds read-only `OpenNtfsDxe.efi` for legacy entry labels;
 - keeps UEFI Windows 10 discovery;
 - keeps Recovery and auxiliary entries visible without pressing Space.
@@ -410,22 +426,21 @@ The installed profile:
 The Windows 10 ESP is labeled `WIN10 EFI`. Its primary
 `\EFI\Microsoft\Boot\bootmgfw.efi` and fallback
 `\EFI\Boot\bootx64.efi` loaders were backed up and verified byte-identical.
-Keep both files. The temporary `WIN10 EFI\EFI\Boot\.contentVisibility` marker
-was removed after picker testing so the primary Windows entry remains
-discoverable. A text file containing `Disabled` remains at
+Keep both files. A text file containing `Disabled` belongs at
+`WIN10 EFI\EFI\Boot\.contentVisibility`; it hides only the duplicate fallback
+entry while leaving the primary Microsoft loader discoverable. A separate
+text file containing `Disabled` remains at
 `MACRECOVERY\EFI\Boot\.contentVisibility`; it hides only the duplicate
 fallback picker entry and does not remove that fallback boot path.
 
-The legacy NTFS root has an ASCII `.contentDetails` file containing
-`Windows 7`. That label is accepted only after the partition's SP1 kernel,
-BCD, `bootmgr`, and `winload.exe` identities pass. It does not prove that
-firmware CSM can complete a Windows 7 boot, so retain the physical boot test
-as a separate acceptance gate.
-
-OpenCore's own documentation states that `OpenLegacyBoot` can detect and boot
-installed legacy systems on firmware with CSM. This matches the 3040's
-existing Windows 7 MBR/legacy path. It must still pass a physical boot test
-before the picker is made the persistent firmware default.
+The Windows 7 NTFS root still has an ASCII `.contentDetails` file and its SP1
+kernel, BCD, `bootmgr`, `winload.exe`, and `winload.efi` remain present.
+Those files do not constitute a boot path. The 1 TB disk was subsequently
+converted from MBR to pure GPT and now has only a protective MBR. The former
+active legacy partition and bootable MBR entry no longer exist, so
+`OpenLegacyBoot` must remain disabled. Re-enable it only if a sector-level
+audit proves that a real legacy or hybrid boot path has been deliberately
+restored.
 
 Promotion order:
 
@@ -439,7 +454,8 @@ Promotion order:
 6. Require the external GoldenGate picker, both OS icons, five-second
    timeout, and all-entry visibility.
 7. Promote by same-volume rename, retaining the rollback EFI.
-8. Test `Monterey`, `Windows 10`, Recovery, and the legacy Windows 7 entry.
+8. Test `Monterey`, `Windows 10`, and Recovery. Do not expose Windows 7 until
+   a new UEFI path has been built and independently validated.
 9. Keep the known-good EFI rollback until every path has passed a cold boot.
 
 Do not write Dell `BootOrder` or enable OpenCore `LauncherOption=Full` before
@@ -465,6 +481,73 @@ Source:
 Apply mode keeps both a same-volume rollback EFI and an independent backup
 under `~/Documents/OptiPlex-3040-EFI-Backups`. It does not set firmware order
 or request a restart.
+
+## 2026-07-30 Picker Repair
+
+The live failure had two independent causes:
+
+1. `WIN10 EFI\EFI\Microsoft\Boot\.contentVisibility` contained `Disabled`.
+   OpenCore therefore excluded the real Microsoft boot manager and exposed
+   the byte-identical fallback as a generic Windows entry.
+2. The 1 TB Windows 7 disk had been converted to pure GPT. Its protective MBR
+   contains only type `EE`; there is no active legacy NTFS entry for
+   `OpenLegacyBoot` to start, so the picker entry looped back or failed.
+
+The audit did not infer this from labels. It verified both Windows 10 EFI
+loaders as x86-64 EFI applications, confirmed their hashes were identical,
+parsed the BCD as a registry hive, and confirmed its boot-manager and OS
+device records still matched the live EFI and Windows 10 GPT partitions.
+The BCD and both loaders were left byte-for-byte unchanged. Dell preboot
+diagnostics reported only a missing keyboard; they contained no RTC or CMOS
+battery alert.
+
+Before the repair, preserve:
+
+- the complete `WIN10 EFI` and `MACRECOVERY` EFI trees;
+- NVRAM XML and the current disk layout;
+- the first and last 2 MiB of the converted 1 TB disk;
+- a SHA-256 manifest covering every backup file.
+
+The guarded helper then moves the existing `Disabled` marker from the primary
+Microsoft directory to the fallback directory and disables the
+`OpenLegacyBoot.efi` driver by path, not by a hard-coded array index. It
+validates the candidate and live configs with the matching OpenCore 1.0.7
+`ocvalidate`, remounts both ESPs read-only, and never edits BCD, GPT, Dell
+`BootOrder`, or OpenCore's saved Monterey default.
+
+```bash
+./repair-optiplex-3040-picker.sh audit \
+  --win10-device <WIN10-EFI-diskXsY> \
+  --opencore-device <MACRECOVERY-diskXsY> \
+  --ocvalidate ~/Downloads/OpenCore-1.0.7/Utilities/ocvalidate/ocvalidate
+
+./repair-optiplex-3040-picker.sh apply \
+  --win10-device <WIN10-EFI-diskXsY> \
+  --opencore-device <MACRECOVERY-diskXsY> \
+  --ocvalidate ~/Downloads/OpenCore-1.0.7/Utilities/ocvalidate/ocvalidate \
+  --confirm REPAIR-3040-PICKER
+```
+
+Source:
+[repair-optiplex-3040-picker.sh](./scripts/repair-optiplex-3040-picker.sh)
+
+The current Monterey default still resolves to its exact Preboot volume group
+and there is no `efi-boot-next` override. Windows 7 data remains intact but
+unbootable. Repair it from a proven Windows 10 boot with native Windows tools
+as a separate transaction; do not synthesize a hybrid MBR from macOS.
+
+The first controlled restart after this metadata repair completed macOS
+shutdown but did not return to the LAN within the bounded observation window.
+That outage was not proof of an EFI regression or a macOS freeze. Windows 10
+was subsequently selected and reached its desktop, and a later physical
+picker recovery selected normal Monterey and restored macOS, key-only SSH,
+and UU. The primary Windows 10 and Monterey paths therefore passed their
+physical boot gates. Windows 7 remains data-only and unbootable.
+
+The read-only 1.8 MB `No Name` picker item is virtual driver media exported by
+an attached `aicsemi` USB peripheral. It is not another OS. Its medium cannot
+accept `.contentVisibility`; leave it alone or unplug the peripheral rather
+than changing OpenCore scan policy during stabilization.
 
 ## NTFS Data Migration
 
@@ -807,6 +890,8 @@ node --version
 npm --version
 codex --version
 codesign -dv --verbose=2 /Applications/UURemote.app
+codesign --verify --deep --strict /Applications/Codex.app
+codesign -dv --verbose=2 /Applications/Codex.app
 ```
 
 The final acceptance gate is a cold boot of every picker entry. SSH and remote

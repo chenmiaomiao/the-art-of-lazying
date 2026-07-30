@@ -5,6 +5,7 @@ set -euo pipefail
 readonly EXPECTED_USER="lachlan"
 readonly EXPECTED_UU_SHA256="492ab1c360fb30f471dca71d2468be93d6a76a72b7d256d911f2095f72acefdd"
 readonly EXPECTED_UU_TEAM_ID="PU9BNSBJW7"
+readonly EXPECTED_CODEX_TEAM_ID="2DC432GLL2"
 readonly PINNED_NVM_VERSION="0.40.4"
 readonly NVM_ARCHIVE_SHA256="5949b50e4640f2be2263f963952673d7f1a8745a83f05365e99f032fe78307fd"
 readonly NODE_VERSION="22"
@@ -14,6 +15,7 @@ authorized_key=""
 peer_host=""
 peer_user="$EXPECTED_USER"
 set_legacy_vnc=0
+install_codex_desktop=0
 
 usage() {
   cat <<'EOF'
@@ -22,6 +24,7 @@ Usage:
     --uu-package /path/to/uuyc_4.33.0.pkg \
     --authorized-key /path/to/authorized_key.pub \
     --peer-host 192.168.1.227 \
+    [--codex-desktop] \
     [--vnc-password]
 
 The script is idempotent. It does not edit OpenCore, rename disks, enable
@@ -30,6 +33,10 @@ automatic login, alter TCC databases, or start a macOS upgrade.
 --vnc-password securely prompts for a separate legacy VNC password. Use it
 only on a trusted LAN when the client cannot negotiate Apple account
 authentication. The password is never written into this script.
+
+--codex-desktop asks the installed Codex CLI to download and launch the
+official desktop app, then verifies its Apple code signature and OpenAI Team
+ID. Run this option only from the logged-in Aqua desktop session.
 EOF
 }
 
@@ -120,6 +127,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --vnc-password)
       set_legacy_vnc=1
+      shift
+      ;;
+    --codex-desktop)
+      install_codex_desktop=1
       shift
       ;;
     -h|--help)
@@ -337,6 +348,27 @@ nvm install "$NODE_VERSION"
 nvm alias default "$NODE_VERSION"
 nvm use "$NODE_VERSION"
 npm install --global @openai/codex@latest
+
+if [ "$install_codex_desktop" -eq 1 ]; then
+  codex app "$HOME/Projects"
+  [ -d /Applications/Codex.app ] ||
+    fail "Codex CLI completed but /Applications/Codex.app is missing"
+  codesign --verify --deep --strict /Applications/Codex.app
+  codex_team_id=$(
+    codesign -dv --verbose=2 /Applications/Codex.app 2>&1 |
+      sed -n 's/^TeamIdentifier=//p' |
+      head -n 1
+  )
+  [ "$codex_team_id" = "$EXPECTED_CODEX_TEAM_ID" ] ||
+    fail "installed Codex app has an unexpected Team ID: $codex_team_id"
+  codex_identifier=$(
+    codesign -dv --verbose=2 /Applications/Codex.app 2>&1 |
+      sed -n 's/^Identifier=//p' |
+      head -n 1
+  )
+  [ "$codex_identifier" = "com.openai.codex" ] ||
+    fail "installed Codex app has an unexpected identifier: $codex_identifier"
+fi
 
 open -a UURemote || true
 

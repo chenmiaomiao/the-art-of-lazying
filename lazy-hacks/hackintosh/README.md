@@ -8,7 +8,8 @@ private keys, and complete EFI trees outside this public repository.
 
 - [OptiPlex 3040 Monterey and multi-boot operations](./optiplex-3040-macos-postinstall-and-sequoia-staging.md)
   - establish key-only SSH in both directions;
-  - install signed UU Remote, nvm, Node.js, and Codex CLI;
+  - install signed UU Remote, nvm, Node.js, Codex CLI, and the official
+    OpenAI-signed Codex desktop app;
   - enable consented UU control, Apple Remote Management, an auto-fit
     password-only Remmina launcher, bidirectional desktop launchers, and
     never-sleep workstation behavior;
@@ -17,6 +18,14 @@ private keys, and complete EFI trees outside this public repository.
   - repair only the audited Monterey Preboot label from Recovery;
   - promote a backed-up GoldenGate OpenCanopy picker with Monterey, Recovery,
     Windows 10, and legacy Windows 7 discovery;
+  - audit the later pure-GPT conversion, expose the valid primary Windows 10
+    loader, hide its duplicate fallback, and suppress the impossible legacy
+    Windows 7 path without editing BCD or partition tables;
+  - diagnose the 3040's Kaby-spoofed HD 530 framebuffer hangs, stage a
+    separate native-Monterey candidate, recover a failed firmware handoff,
+    and remove its test entry while the candidate remains unaccepted;
+  - reject the desktop app's high-CPU software-rendering experiment and
+    install a verified nvm-based Codex CLI Desktop launcher instead;
   - copy and full-hash-verify both NTFS data volumes into named folders;
   - preserve the shrunk NTFS source and stage a separate 200 GiB Apple data
     partition without consuming the reserved 70.6 GiB gap;

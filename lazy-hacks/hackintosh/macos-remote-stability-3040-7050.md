@@ -7,7 +7,10 @@ desktop before changing OpenCore.
 
 ## Conclusion
 
-Neither Mac had evidence of a kernel, graphics, power, or memory crash.
+The initial audit found no conventional kernel, GPU-restart, power, or memory
+crash on either Mac. A later protected-log review found recurrent framebuffer
+transaction hangs on the 3040; those events do not create a conventional GPU
+restart or panic report.
 The 7050 remained responsive after the controls below were installed: SSH,
 VNC, WindowServer, and all expected UU processes stayed up while the covered
 iCloud and Photos workers settled to zero or near-zero CPU.
@@ -16,7 +19,7 @@ iCloud and Photos workers settled to zero or near-zero CPU.
 | --- | --- | --- |
 | Last shutdown cause | Software initiated | Software initiated |
 | Panic, watchdog, GPU restart, or WindowServer report | None found | None found |
-| Intel HD 530 acceleration and active display | Healthy | Healthy |
+| Intel HD 530 acceleration and active display | Accelerated, but Kaby-spoofed with recurring transaction hangs | Healthy |
 | Memory pressure, compression, and swap | Healthy | Healthy |
 | SMART status | Verified | Verified |
 | Sleep/wake cycles | None | None |
@@ -25,10 +28,11 @@ iCloud and Photos workers settled to zero or near-zero CPU.
 | Persistent background load | None | iCloud Drive and Photos analysis |
 | UU Remote resource reports | Excessive wakeups | Excessive wakeups |
 
-The 3040 was healthy after its software restart. Its only recurring anomaly
-was UU Remote exceeding macOS's wakeup-rate threshold. Two reports measured
-45,001 wakeups in 196 and 50 seconds, or approximately 230 and 908 wakeups per
-second. macOS recorded the reports but took no action.
+During the initial audit, the 3040 was healthy after its software restart.
+Its visible anomaly at that point was UU Remote exceeding macOS's wakeup-rate
+threshold. Two reports measured 45,001 wakeups in 196 and 50 seconds, or
+approximately 230 and 908 wakeups per second. macOS recorded the reports but
+took no action. The later HD 530 evidence is recorded separately below.
 
 Later in the same maintenance window, the 3040 stopped answering ping, SSH,
 and VNC and did not reappear at another LAN address. That state cannot be
@@ -97,16 +101,195 @@ This does not disable iCloud or Photos analysis. It lets those services
 finish with lower scheduling priority so WindowServer and remote input remain
 responsive.
 
-The 3040 had the earlier reversible guard installed, but became unreachable
-before this final nice-level-19 revision could be deployed. Install the
-repository version after collecting its next-boot evidence. No TCC database,
-Apple ID state, iCloud database, Photos library, UU account, EFI file, boot
-argument, device property, or kext was modified.
+On 2026-07-30 the 3040 returned and the current guard revision was installed.
+The dedicated UU supervisor was also verified healthy with its root daemon,
+Aqua agent, server process, 30-second watchdog, and fresh heartbeat present.
+No TCC database, Apple ID state, iCloud database, Photos library, UU account,
+boot argument, device property, or kext was modified by the stability work.
 
 The live controls reduce software contention; they do not remove the 7050's
 hardware-port loop or create disk space. The remaining maintenance priorities
 are to disable or repair optical `SATA-1`, keep at least 25 GiB free, and
 activate the reviewed TRIM candidate only during a planned restart.
+
+## 2026-07-30 3040 Follow-up
+
+The successful Monterey boot was observed from its first minutes rather than
+after the desktop had settled. `mds_stores` briefly consumed about 457 percent
+CPU while Spotlight opened the newly attached APFS data volumes. It fell to
+about 1 percent within three minutes. Memory pressure was healthy, swap I/O
+was zero, the Monterey container had about 89 GiB free, SMART was Verified,
+and protected logs contained no panic, watchdog, GPU restart, memory, or live
+storage error.
+
+`Mac Data` and `Sequoia Data` are data/staging volumes on the slower 1 TB hard
+disk and do not need interactive search indexing. Indexing was disabled on
+both and each now carries `.metadata_never_index`. Monterey itself remains
+indexed. This removes the reproducible login-time CPU burst without globally
+disabling Spotlight.
+
+```bash
+sudo mdutil -i off "/Volumes/Mac Data"
+sudo mdutil -i off "/Volumes/Sequoia Data"
+sudo touch "/Volumes/Mac Data/.metadata_never_index"
+sudo touch "/Volumes/Sequoia Data/.metadata_never_index"
+mdutil -s "/Volumes/Mac Data" "/Volumes/Sequoia Data"
+```
+
+The power and update policy was reapplied and verified:
+
+- sleep, disk sleep, display sleep, standby, power nap, and automatic
+  power-off are disabled;
+- Wake-on-LAN, TCP keepalive, restart after freeze, and restart after power
+  failure are enabled;
+- major macOS download and installation remain manual;
+- critical and configuration-data updates remain enabled.
+
+A later controlled `shutdown -r now` completed shutdown but the host did not
+return to ARP, ping, or SSH during the bounded observation window. Do not call
+that a desktop freeze: the remote evidence cannot distinguish a machine that
+powered off instead of restarting from a stop at firmware, OpenCore, Apple
+boot, or loginwindow. The physical power LED and display stage are required
+before another reset. Once it returns, inspect the immediately preceding
+shutdown/OpenCore logs before changing kexts or power policy again.
+
+## 3040 HD 530 Framebuffer Evidence
+
+The later flashing report produced a narrower hardware-path finding:
+
+- the CPU and physical iGPU are Skylake (`i7-6700`, HD 530 device `0x1912`);
+- the live Monterey config injects Kaby Lake device `0x5912`, platform
+  `00001259`, and boot argument `-igfxsklaskbl`;
+- Monterey consequently loads `AppleIntelKBLGraphics` and
+  `AppleIntelKBLGraphicsFramebuffer`;
+- protected kernel logs contain recurring `TxnHang1`, `TxnHang2`, fake-VBL,
+  skipped-flip, and gamma/flip events during UU/VNC display changes and
+  GPU-enabled Codex launches;
+- there was no corresponding kernel panic, WindowServer crash, swap pressure,
+  SMART failure, or live storage I/O error.
+
+This makes the framebuffer path the leading freeze/flashing cause. Codex is a
+reproducible trigger, not proof that the signed Codex bundle is defective.
+The original Codex app passed deep signature verification with identifier
+`com.openai.codex` and OpenAI Team ID `2DC432GLL2`.
+
+The upstream basis for a native Monterey candidate is explicit:
+
+- [WhateverGreen's Intel FAQ](https://github.com/acidanthera/WhateverGreen/blob/master/Manual/FAQ.IntelHD.en.md)
+  lists Skylake support through macOS 12 and reserves Skylake-to-Kaby
+  spoofing for macOS 13 and later;
+- [Dortania's desktop Skylake configuration](https://dortania.github.io/OpenCore-Install-Guide/config.plist/skylake.html)
+  uses native desktop HD 530 platform `00001219` without a Kaby device-ID
+  spoof.
+
+The guarded candidate therefore changes only:
+
+1. `AAPL,ig-platform-id`: `00001259` to `00001219`;
+2. removal of injected `device-id=12590000`;
+3. removal of `-igfxsklaskbl`.
+
+It retains the reviewed framebuffer memory patches, OpenCore 1.0.7, SMBIOS,
+kexts, ACPI, and every non-graphics setting. It is staged as a separate
+`EFI/OC` tree on the Samsung Windows ESP. Both Microsoft loaders, BCD, the
+live Mac EFI, partitions, and the saved picker default are hash-checked and
+left unchanged.
+
+```bash
+./stage-optiplex-3040-monterey-native-graphics.sh audit \
+  --source-device <MACRECOVERY-diskXsY> \
+  --target-device <WIN10-EFI-diskXsY> \
+  --ocvalidate /path/to/OpenCore-1.0.7/ocvalidate
+```
+
+Source:
+[stage-optiplex-3040-monterey-native-graphics.sh](./scripts/stage-optiplex-3040-monterey-native-graphics.sh)
+
+`bless --nextonly` was attempted only after backup and validation. This
+firmware/OpenRuntime combination rejected the write with `0xe00002e2`; no
+`efi-boot-next` variable appeared. Do not retry that command as if it worked.
+The external-entry helper adds a clearly named, non-default OpenCore picker
+item and can remove it transactionally:
+
+```bash
+./arm-optiplex-3040-monterey-native-picker.sh audit \
+  --source-device <MACRECOVERY-diskXsY> \
+  --target-device <WIN10-EFI-diskXsY> \
+  --ocvalidate /path/to/OpenCore-1.0.7/ocvalidate
+```
+
+Source:
+[arm-optiplex-3040-monterey-native-picker.sh](./scripts/arm-optiplex-3040-monterey-native-picker.sh)
+
+The first automated firmware handoff to the candidate did not return to the
+LAN within four minutes. At that point the candidate was **not promoted**.
+The physical picker later returned and the operator selected the prior normal
+`Monterey` entry. Monterey 12.7.6, key-only SSH, and UU all returned. The
+candidate ESP contained no new `opencore-*.txt`, so there is no evidence that
+the one-time firmware handoff reached the candidate OpenCore loader.
+
+The candidate marker, loader, config, hashes, disk layout, current NVRAM, and
+latest normal OpenCore log were preserved under ignored private storage. The
+custom `Monterey Native Graphics Test` entry was then removed transactionally.
+The live Mac ESP was remounted read-only and matching OpenCore 1.0.7
+`ocvalidate` passed. The candidate remains staged but unaccepted; do not
+re-arm it until firmware handoff is tested separately from the graphics
+change.
+
+The saved default resolves to Monterey's exact APFS Preboot volume group,
+`ShowPicker` is enabled, and the timeout is five seconds. The picker also
+showed `No Name`; this is a read-only 1.8 MB FAT12 virtual driver flash
+exported by an attached `aicsemi` USB peripheral, not an operating system.
+Leave it alone or unplug that peripheral instead of changing OpenCore scan
+policy during stabilization.
+
+```powershell
+.\cleanup-optiplex-3040-native-test-boot.ps1 -Mode Audit
+.\cleanup-optiplex-3040-native-test-boot.ps1 `
+  -Mode Cleanup `
+  -Confirm CLEANUP-3040-NATIVE-TEST
+```
+
+Source:
+[cleanup-optiplex-3040-native-test-boot.ps1](./scripts/cleanup-optiplex-3040-native-test-boot.ps1)
+
+The cleanup helper is prepared and manually reviewed, but recovery
+deliberately stayed in Monterey. At the next planned Windows 10 boot, run
+`Audit` first; use `Cleanup` only after reviewing the identified temporary
+entry.
+
+The first mitigation experiment launched the untouched signed desktop app with
+Electron `--disable-gpu`. The flags were applied: the main process showed
+`--disable-gpu` and its graphics helper showed `--use-gl=disabled`. However,
+the main process then consumed 86-100 percent of one CPU core continuously for
+more than five minutes and macOS generated a `cpu_resource` diagnostic. The
+process was stopped and that launcher was removed. Treat software-rendered
+Codex desktop as **failed**, not as a stability fix.
+
+The accepted fallback uses the already installed text-only Codex CLI:
+
+```bash
+./install-codex-cli-launcher-macos.sh install
+```
+
+Source:
+[install-codex-cli-launcher-macos.sh](./scripts/install-codex-cli-launcher-macos.sh)
+
+The helper requires `codex` under the user's nvm tree, verifies that the
+matching global npm package is exactly `@openai/codex`, and creates an
+executable `Codex CLI.command` plus Desktop shortcut. Its install path also
+removes the rejected Electron launcher. On this host it verified
+`codex-cli 0.146.0`; that version is an evidence snapshot, not a pin.
+
+The recovery watch completed 20 ping/SSH checks over ten minutes without a
+failure. WindowServer remained near idle, swap remained zero, and the
+protected kernel-log delta contained no new framebuffer transaction hang,
+fake VBL, skipped flip, GPU restart/panic, watchdog timeout, or storage I/O
+error. The signed desktop app's CPU failure still makes the CLI the accepted
+operating path.
+
+Keep using the CLI until a graphics candidate passes physical display, UU,
+VNC, SSH, and protected-log acceptance. Keep complete EFI/NVRAM backups
+private and off-machine.
 
 ## Unattended UU Startup
 
@@ -257,6 +440,12 @@ safety limit, and a separate five-second live sample detects active storage
 command errors without flooding the report. The audit deliberately does not
 run a full Serial-ATA `system_profiler` scan; polling the known-faulty optical
 port is unnecessary during routine health checks.
+
+The collector also reports the active Intel Skylake/Kaby graphics
+extensions, injected platform/device properties, boot arguments, and bounded
+`TxnHang`/fake-VBL/skipped-flip evidence. This distinction matters because a
+framebuffer transaction hang can cause flashing or a remote-desktop stall
+without producing a conventional GPU restart or panic report.
 
 The guard is reversible:
 
