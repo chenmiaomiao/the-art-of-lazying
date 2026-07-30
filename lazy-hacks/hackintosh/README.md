@@ -50,8 +50,10 @@ private keys, and complete EFI trees outside this public repository.
   - install pinned Microsoft-signed OpenSSH with key-only LAN access;
   - smoke-test the staged daemon before booting Win7;
   - validate Win7 through disposable firmware and Windows boot sequences;
-  - return to the unchanged Monterey default and preserve the direct-picker
-    test as an explicit physical gate.
+  - repeat the complete Mac-to-Win7 SSH test without physical console input;
+  - reserve UU for bounded reboot recovery rather than primary debugging;
+  - return to the unchanged Monterey default and keep the operator-reported
+    direct-picker boot separate from the logged acceptance path.
 
 ## Boundary
 
