@@ -44,6 +44,14 @@ private keys, and complete EFI trees outside this public repository.
     without changing account or privacy state;
   - diagnose the 7050 optical SATA fault and stage a guarded SSD TRIM fix;
   - verify Monterey as the 3040's persistent OpenCore default.
+- [OptiPlex 3040 Windows 7 UEFI and SSH repair](./optiplex-3040-win7-uefi-ssh-repair.md)
+  - diagnose GPT conversion damage as unresolved active BCD devices;
+  - repair Win7 offline from the stable Win10 control plane with rollback;
+  - install pinned Microsoft-signed OpenSSH with key-only LAN access;
+  - smoke-test the staged daemon before booting Win7;
+  - validate Win7 through disposable firmware and Windows boot sequences;
+  - return to the unchanged Monterey default and preserve the direct-picker
+    test as an explicit physical gate.
 
 ## Boundary
 

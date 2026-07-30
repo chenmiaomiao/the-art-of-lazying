@@ -252,10 +252,18 @@ policy during stabilization.
 Source:
 [cleanup-optiplex-3040-native-test-boot.ps1](./scripts/cleanup-optiplex-3040-native-test-boot.ps1)
 
-The cleanup helper is prepared and manually reviewed, but recovery
-deliberately stayed in Monterey. At the next planned Windows 10 boot, run
-`Audit` first; use `Cleanup` only after reviewing the identified temporary
-entry.
+The planned Windows 10 maintenance boot completed on 2026-07-30. `Audit`
+matched the reviewed candidate ESP, marker, OpenCore hash, description, path,
+and temporary firmware object before `Cleanup` was confirmed. The helper
+exported the live BCD and firmware state, removed only that object, and a
+second audit reported it absent. Windows Boot Manager, the normal Monterey
+entry, persistent defaults, loaders, and partitions were unchanged.
+
+That run also exposed a Windows API edge case: a drive letter assigned by
+`mountvol /S` was not visible through `Get-Partition -DriveLetter`. The
+helper now verifies the mounted ESP by comparing its stable volume-GUID path
+with the reviewed partition access path. The corrected PowerShell 5.1 script
+passed `Audit`, `Cleanup`, and the post-cleanup audit on the real machine.
 
 The first mitigation experiment launched the untouched signed desktop app with
 Electron `--disable-gpu`. The flags were applied: the main process showed

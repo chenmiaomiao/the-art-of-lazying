@@ -111,9 +111,20 @@ try {
     if ($LASTEXITCODE -ne 0) {
         Fail "could not mount the Windows ESP: $($mountOutput -join ' ')"
     }
-    $mountedPartition = Get-Partition -DriveLetter $mountLetter
-    if ($mountedPartition.DiskNumber -ne $disk.Number -or
-        $mountedPartition.PartitionNumber -ne $partition.PartitionNumber) {
+    # mountvol-assigned ESP letters are not reflected by Get-Partition
+    # -DriveLetter on all Windows builds. Compare stable volume GUID paths.
+    $mountedVolumeOutput = @(& mountvol "${mountLetter}:" /L 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        Fail "could not identify the mounted ESP: $($mountedVolumeOutput -join ' ')"
+    }
+    $mountedVolume = (
+        ($mountedVolumeOutput -join "").Trim()
+    ).TrimEnd([char]92)
+    $expectedVolumePaths = @(
+        $partition.AccessPaths |
+            ForEach-Object { $_.Trim().TrimEnd([char]92) }
+    )
+    if ($expectedVolumePaths -notcontains $mountedVolume) {
         Fail "mountvol selected an unexpected EFI System Partition"
     }
 
