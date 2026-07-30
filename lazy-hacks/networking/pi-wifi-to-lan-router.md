@@ -30,11 +30,11 @@ Traffic flow:
 
 ## Confirmed Stable Snapshot
 
-This is the confirmed stable shape from the working Pi inspected on 2026-07-04. It is a useful target state for another Pi.
+This is the confirmed stable shape from a working Pi. It is a useful target
+state for another Pi without publishing device identity or upstream-network
+details.
 
 ```text
-hostname: raspberrypi
-machine-id prefix: 3d603ac7...
 upstream interface: wlan0
 downstream interface: eth0
 eth0: 192.168.2.1/24
@@ -88,10 +88,10 @@ That split is harmless because both set `ip_forward=1`, but for a new Pi use one
 
 ## Current Active Script
 
-The current Pi has the final active helper at:
+Install the active helper at a system-owned path:
 
 ```text
-/home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh
+/usr/local/sbin/pi-wifi-to-lan-router-fix.sh
 ```
 
 It is installed as a boot-time oneshot service:
@@ -99,13 +99,13 @@ It is installed as a boot-time oneshot service:
 ```ini
 [Unit]
 Description=Ensure Raspberry Pi Wi-Fi-to-LAN router settings
-Documentation=file:/home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh
+Documentation=file:/usr/local/sbin/pi-wifi-to-lan-router-fix.sh
 Wants=network-online.target
 After=NetworkManager.service dnsmasq.service network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh apply
+ExecStart=/usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
 RemainAfterExit=yes
 
 [Install]
@@ -130,16 +130,16 @@ Copy the script to the target Pi:
 
 ```bash
 scp lazy-hacks/networking/pi-wifi-to-lan-router-fix.sh \
-  lachlan@192.168.2.1:/tmp/pi-wifi-to-lan-router-fix.sh
+  <remote-user>@<router-address>:/tmp/pi-wifi-to-lan-router-fix.sh
 ```
 
 Install it:
 
 ```bash
-ssh lachlan@192.168.2.1
+ssh <remote-user>@<router-address>
 sudo install -D -o root -g root -m 0755 \
   /tmp/pi-wifi-to-lan-router-fix.sh \
-  /home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh
+  /usr/local/sbin/pi-wifi-to-lan-router-fix.sh
 ```
 
 Create the oneshot service:
@@ -148,13 +148,13 @@ Create the oneshot service:
 sudo tee /etc/systemd/system/pi-wifi-to-lan-router-fix.service >/dev/null <<'EOF'
 [Unit]
 Description=Ensure Raspberry Pi Wi-Fi-to-LAN router settings
-Documentation=file:/home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh
+Documentation=file:/usr/local/sbin/pi-wifi-to-lan-router-fix.sh
 Wants=network-online.target
 After=NetworkManager.service dnsmasq.service network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh apply
+ExecStart=/usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
 RemainAfterExit=yes
 
 [Install]
@@ -165,22 +165,23 @@ EOF
 Run once manually first:
 
 ```bash
-sudo /home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh status
-sudo /home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh apply
+sudo /usr/local/sbin/pi-wifi-to-lan-router-fix.sh status
+sudo /usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
 ```
 
-If the upstream Wi-Fi connection name is not `HKU`, override it:
+If the upstream Wi-Fi connection name differs from the script default, override
+it:
 
 ```bash
-sudo UPSTREAM_CONN='YOUR_WIFI_NAME' \
-  /home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh apply
+sudo UPSTREAM_CONN='<upstream-connection>' \
+  /usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
 ```
 
 If the interface names differ:
 
 ```bash
-sudo UPSTREAM_CONN='YOUR_WIFI_NAME' WAN_IF=wlan0 LAN_IF=eth0 \
-  /home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh apply
+sudo UPSTREAM_CONN='<upstream-connection>' WAN_IF=wlan0 LAN_IF=eth0 \
+  /usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
 ```
 
 Enable at boot only after manual `apply` succeeds:
@@ -234,10 +235,10 @@ The better stable pattern is:
 - no periodic log spam on the SD card
 - use `status` for diagnosis, not a permanent watcher
 
-The old diagnostic monitor may be useful for a temporary investigation:
+An old diagnostic monitor may be useful for a temporary investigation:
 
 ```text
-/home/lachlan/pi-router-fix-work/pi-router-health-monitor.sh
+<temporary-work-directory>/pi-router-health-monitor.sh
 ```
 
 But it should stay disabled unless actively debugging an outage. It loops forever, writes `/var/log/pi-router-health.log`, and pings every 60 seconds. That is useful evidence collection, not the normal stable operating mode.
@@ -247,10 +248,14 @@ But it should stay disabled unless actively debugging an outage. It loops foreve
 Disable Wi-Fi powersave for the upstream NetworkManager connection:
 
 ```bash
-sudo nmcli connection modify YOUR_WIFI_CONNECTION 802-11-wireless.powersave 2
-sudo nmcli connection down YOUR_WIFI_CONNECTION
-sudo nmcli connection up YOUR_WIFI_CONNECTION
+upstream_connection='<upstream-connection>'
+sudo nmcli connection modify "$upstream_connection" \
+  802-11-wireless.powersave 2
+sudo iw dev wlan0 set power_save off
 ```
+
+The NetworkManager change persists for the next activation, while `iw` changes
+the current runtime state without deliberately dropping the remote session.
 
 Clean and persist a single NAT rule set:
 
@@ -293,15 +298,18 @@ NAT POSTROUTING:
 Verification should include:
 
 ```bash
+upstream_connection='<upstream-connection>'
 cat /proc/sys/net/ipv4/ip_forward
-nmcli -f 802-11-wireless.powersave connection show YOUR_WIFI_CONNECTION
+nmcli -f 802-11-wireless.powersave connection show "$upstream_connection"
 ip -brief addr show eth0
 ip -brief addr show wlan0
 systemctl is-active dnsmasq
 sudo iptables -S FORWARD
 sudo iptables -t nat -S POSTROUTING
-ping -c 2 8.8.8.8
-getent hosts google.com
+upstream_gateway=$(ip -4 route show default dev wlan0 | awk 'NR == 1 {print $3}')
+test -n "$upstream_gateway"
+ping -c 2 "$upstream_gateway"
+getent ahostsv4 example.com
 ```
 
 If those checks match the shape above, the fix does not need to be rerun.
@@ -365,32 +373,207 @@ getent hosts google.com
 
 ## Two Pis With The Same LAN IP
 
-It is possible to have two different Pi routers both using `192.168.2.1` on their downstream Ethernet side, but only if they are reached through separated network paths.
+Two Pi routers can use the same downstream address only when the workstation
+reaches them through genuinely separate paths. Source binding helps select a
+path, but it does not make an ambiguous routing table safe.
 
-Example workstation shape:
+Use placeholders for the private values:
+
+| Placeholder | Meaning |
+| --- | --- |
+| `<shared-router-ip>` | Address used by both routers on their separate downstream networks. |
+| `<source-address-a>` | Workstation address whose route reaches router A. |
+| `<source-address-b>` | Workstation address whose route reaches router B. |
+| `<remote-user>` | Administrative account on the Pis. |
+| `<path-a-private-key>` | Local private-key filename for path A. |
+| `<path-b-private-key>` | Local private-key filename for path B. |
+
+Do not put real hostnames, SSIDs, machine IDs, source addresses, key names, or
+host-key bodies in a shared note.
+
+### Pin Each Host Key Before Connecting
+
+Do not use `StrictHostKeyChecking=accept-new` for same-address devices. An
+unexpected device on either path could otherwise be trusted automatically.
+
+At each Pi's local console, display its Ed25519 host public key and fingerprint:
+
+```bash
+sudo cat /etc/ssh/ssh_host_ed25519_key.pub
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Carry the public key and fingerprint to the workstation through a trusted,
+out-of-band path. Never copy
+`/etc/ssh/ssh_host_ed25519_key`, which is the private host key.
+
+Create a dedicated known-hosts entry whose first field matches the alias that
+will be used by `HostKeyAlias`. For example, in PowerShell:
+
+```powershell
+$knownHosts = "$HOME\.ssh\pi-router-path-a-known_hosts"
+'pi-router-path-a ssh-ed25519 <verified-host-public-key-a>' |
+  Set-Content -Encoding ascii $knownHosts
+ssh-keygen -lf $knownHosts
+```
+
+Compare the displayed fingerprint with the one read at the Pi console. Stop if
+they differ. Repeat with a separate file and verified key for path B.
+
+### Use Source-Bound SSH Aliases
+
+Add entries like these to the workstation's OpenSSH config after replacing every
+placeholder:
+
+```sshconfig
+Host pi-router-path-a
+    HostName <shared-router-ip>
+    User <remote-user>
+    BindAddress <source-address-a>
+    HostKeyAlias pi-router-path-a
+    UserKnownHostsFile ~/.ssh/pi-router-path-a-known_hosts
+    IdentityFile ~/.ssh/<path-a-private-key>
+    IdentitiesOnly yes
+    StrictHostKeyChecking yes
+
+Host pi-router-path-b
+    HostName <shared-router-ip>
+    User <remote-user>
+    BindAddress <source-address-b>
+    HostKeyAlias pi-router-path-b
+    UserKnownHostsFile ~/.ssh/pi-router-path-b-known_hosts
+    IdentityFile ~/.ssh/<path-b-private-key>
+    IdentitiesOnly yes
+    StrictHostKeyChecking yes
+```
+
+Before connecting, verify that each source address is currently assigned to the
+expected workstation interface and that the OS selects the intended path.
+
+On Linux:
+
+```bash
+ip -brief address
+ip route get <shared-router-ip> from <source-address-a>
+ip route get <shared-router-ip> from <source-address-b>
+```
+
+On Windows:
+
+```powershell
+Get-NetIPAddress -AddressFamily IPv4
+Get-NetRoute -AddressFamily IPv4 |
+  Sort-Object DestinationPrefix, RouteMetric
+ssh -G pi-router-path-a |
+  Select-String 'hostname|bindaddress|hostkeyalias|userknownhostsfile'
+ssh -G pi-router-path-b |
+  Select-String 'hostname|bindaddress|hostkeyalias|userknownhostsfile'
+```
+
+If either route is ambiguous, fix the interface or route configuration before
+opening SSH. Do not test a repair by connecting to the raw shared address.
+
+Connect only through the aliases:
+
+```powershell
+ssh pi-router-path-a
+ssh pi-router-path-b
+```
+
+After login, confirm the physical device using an inventory label or a console
+record, then inspect its network role:
+
+```bash
+ip -brief address
+ip route
+nmcli -t -f NAME,DEVICE,TYPE connection show --active
+sudo /usr/local/sbin/pi-wifi-to-lan-router-fix.sh status
+```
+
+Do not publish the command output when it contains device identity or upstream
+network details.
+
+### Apply Per-Router Settings Safely
+
+Run `status` first. For a manual apply, pass the router-specific connection and
+interface names without changing Wi-Fi connectivity during the remote session:
+
+```bash
+sudo env \
+  UPSTREAM_CONN='<upstream-connection>' \
+  WAN_IF='<upstream-interface>' \
+  LAN_IF='<downstream-interface>' \
+  /usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
+```
+
+Do not request a Wi-Fi reconnect on the first remote apply. Confirm success
+before enabling the boot service.
+
+If the base unit already contains `Type`, `ExecStart`, and `RemainAfterExit`,
+its drop-in should override only environment values:
+
+```bash
+sudo systemctl edit pi-wifi-to-lan-router-fix.service
+```
+
+```ini
+[Service]
+Environment="UPSTREAM_CONN=<upstream-connection>"
+Environment="WAN_IF=<upstream-interface>"
+Environment="LAN_IF=<downstream-interface>"
+```
+
+Do not repeat `ExecStart` in the drop-in. Review the complete merged unit and
+make sure it still has exactly one `ExecStart`:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl cat pi-wifi-to-lan-router-fix.service
+sudo systemctl enable --now pi-wifi-to-lan-router-fix.service
+sudo systemctl status pi-wifi-to-lan-router-fix.service --no-pager
+```
+
+Expected status is `active (exited)`. The helper is an idempotent oneshot, not a
+polling daemon.
+
+### Verify Both Sides
+
+On the Pi, test only its upstream path first:
+
+```bash
+upstream_interface='<upstream-interface>'
+upstream_gateway=$(
+  ip -4 route show default dev "$upstream_interface" |
+    awk 'NR == 1 {print $3}'
+)
+test -n "$upstream_gateway"
+ping -c 2 "$upstream_gateway"
+getent ahostsv4 example.com
+```
+
+Then test forwarding from a client physically attached to that Pi's downstream
+LAN:
 
 ```text
-eno2      -> wired upstream router 192.168.1.1
-wlp0s20f3 -> Wi-Fi upstream router 192.168.24.1
+1. Confirm the client received an address and default route from the Pi.
+2. Ping <shared-router-ip>.
+3. Ping <known-public-test-address>.
+4. Resolve example.com using <shared-router-ip> as the DNS server.
+5. Open an HTTPS site allowed by the upstream network.
 ```
 
-If both upstream paths can eventually reach a Pi at `192.168.2.1`, the local workstation routing table decides which Pi is reached. Before changing the Pi, confirm the path:
+Repeating `ping <shared-router-ip>` on the Pi itself proves only its own local
+address exists; it does not test downstream forwarding. Repeat the downstream
+client checks for the other Pi through its physically separate LAN.
 
-```bash
-ip route get 192.168.2.1 from 192.168.1.99
-ip route get 192.168.2.1 from 192.168.24.108
-```
+The stable firewall shape on each router is one forward rule in each direction,
+one upstream `MASQUERADE` rule, and one scoped TTL rule. Run the helper's
+`status` action again and verify no duplicate rules appeared.
 
-To force SSH over the wired source address:
-
-```bash
-ssh -b 192.168.1.99 \
-  -o UserKnownHostsFile=/tmp/pi-wired-known_hosts \
-  -o StrictHostKeyChecking=accept-new \
-  lachlan@192.168.2.1
-```
-
-Use a throwaway `UserKnownHostsFile` when intentionally reaching same-IP devices through different paths, otherwise SSH host-key checks can become confusing.
+If package work fails with `Bus error` and the kernel reports SD-card I/O
+errors, stop broad upgrades. Follow
+[Raspberry Pi SD-Card I/O Failure: Temporary Apt Recovery](./pi-sd-bad-sector-apt-repair.md);
+image and replace the card before attempting live mutation whenever possible.
 
 ## Confirmed Script Flaw
 
@@ -459,7 +642,7 @@ netfilter-persistent save
 For the live Pi, the safer helper is the idempotent repair script:
 
 ```bash
-sudo /home/lachlan/scripts/pi-wifi-to-lan-router-fix.sh apply
+sudo /usr/local/sbin/pi-wifi-to-lan-router-fix.sh apply
 ```
 
 Do not use the old install mode repeatedly as a repair command unless it has been hardened with the idempotent rule pattern above.
