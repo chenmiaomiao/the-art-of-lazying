@@ -81,10 +81,11 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - dedicated SSH keys, mDNS, SAN certificates, Remmina, GFX, and end-to-end verification
 
 - [windows-rdp-current-physical-desktop.md](./windows-rdp-current-physical-desktop.md)
-  - the current OptiPlex-7090 physical-desktop endpoint on `3391`
-  - why Windows RDP on `3389` shows the separate-session conflict
-  - the verified Windows desktop shortcut and `.rdp` profile
-  - service ownership, non-disruptive verification, recovery rules, and the SSH alias
+  - why the UU bridge's internal RDP client prevents a second client from joining the current desktop
+  - the verified Mac `Connect to 7090.app` path through authenticated VNC over key-only SSH
+  - why the obsolete `[::1]:5900` tunnel reached a black Xvfb desktop
+  - how the app-only UU launcher avoids recursive mirroring without splitting one Wine prefix across displays
+  - service ownership, namespace-aware verification, recovery rules, and the SSH alias
 
 - [xrdp-cjk-input-on-ubuntu-24-04.md](./xrdp-cjk-input-on-ubuntu-24-04.md)
   - why Chinese and Japanese input can work in terminal/Sublime but fail in Chrome, Firefox, and Typora over `xrdp`

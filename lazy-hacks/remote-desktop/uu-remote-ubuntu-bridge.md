@@ -233,6 +233,31 @@ and restores the relay automatically. This guard affects only Wine's private
 display, not the physical GNOME desktop. After reconnecting, require fresh
 broker records with `focus=ready`, matching counts, and `error=0`.
 
+Do not run `GameViewer.exe` on the physical display while its server, broker,
+and FreeRDP relay remain on the private display. Wine foreground state is
+shared across one prefix, even when the X windows are on different displays.
+That split was reproduced with both mouse and keyboard records returning
+`focus=timeout`, `result=0`, and `error=21`.
+
+The desktop launcher avoids the split:
+
+```bash
+uu-remote open
+```
+
+It maps only the existing UU management window through a loopback-only
+x11vnc sidecar and opens it in TigerVNC. This looks and behaves like a normal
+desktop application without exposing the private root window or launching the
+recursive noVNC console. Closing the viewer minimizes UU and restores focus to
+`Ubuntu-Desktop-Relay`.
+
+For a Mac that must control the current physical Ubuntu desktop, direct RDP is
+also the wrong second connection: the internal Wine FreeRDP client already
+occupies GNOME Desktop Sharing. The maintained `Connect to 7090.app` instead
+uses key-only SSH plus authenticated, loopback-only VNC to capture the
+existing relay window. See
+[Connect to the Current Ubuntu Desktop](./windows-rdp-current-physical-desktop.md).
+
 ## Installation and Route Selection
 
 The conservative install remains:

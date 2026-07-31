@@ -1,167 +1,202 @@
-# Windows RDP To The Current Ubuntu Desktop
+# Connect to the Current Ubuntu Desktop
 
 ## Result
 
-This setup makes Windows RDP attach to the Ubuntu desktop that is already
-visible on the physical monitor. It does not ask GNOME to create a second
-login session.
+The OptiPlex 7090 UU bridge already owns GNOME Desktop Sharing through one
+internal RDP client:
 
-Verified workstation:
+```text
+UU Remote
+  -> Wine SDL FreeRDP
+  -> GNOME Desktop Sharing
+  -> current physical GNOME desktop
+```
+
+GNOME does not allow a second RDP client to join that same shared desktop
+concurrently. The reliable Mac path therefore captures the bridge's existing
+`Ubuntu-Desktop-Relay` window and carries only that window through an
+authenticated VNC-over-SSH tunnel.
+
+Validated workstation:
 
 | Item | Value |
 | --- | --- |
-| Ubuntu host | `OptiPlex-7090` |
-| Ubuntu address | `192.168.1.227` |
+| Ubuntu host | `OptiPlex-7090.local` |
+| Address during validation | `192.168.1.100` |
 | Ubuntu user | `lachlan` |
 | Session | GNOME 46, Wayland, already logged in |
-| Physical-desktop RDP port | `3391` |
-| UU bridge | active and sharing the same desktop |
+| Internal bridge RDP port | `3391` |
+| Mac SSH alias | `glassagent-ubuntu` |
+| Mac desktop shortcut | `~/Desktop/Connect to 7090.app` |
 
-Connect from Windows with:
+Use the hostname or SSH alias instead of relying on the recorded DHCP address.
 
-```powershell
-mstsc /v:192.168.1.227:3391
-```
+## Mac Current-Desktop Shortcut
 
-Authenticate with the GNOME Desktop Sharing credentials. The credentials are
-intentionally not recorded in this repository.
-
-## Windows Desktop Shortcut
-
-The verified Windows setup has these files on the Windows user's desktop:
+The default **Current Desktop** action uses:
 
 ```text
-Ubuntu Physical Desktop.lnk
-Ubuntu Physical Desktop.rdp
+macOS Screen Sharing
+  -> localhost:15922
+  -> passwordless SSH alias glassagent-ubuntu
+  -> Ubuntu 127.0.0.1:5922
+  -> x11vnc for Ubuntu-Desktop-Relay only
+  -> existing Wine FreeRDP view
+  -> current physical GNOME desktop
 ```
 
-The `.rdp` profile contains the important endpoint and control settings:
+The maintained AppleScript source is:
 
 ```text
-full address:s:192.168.1.227:3391
-username:s:lachlan
-screen mode id:i:2
-desktopwidth:i:1920
-desktopheight:i:1080
-session bpp:i:32
-smart sizing:i:1
-redirectclipboard:i:1
-prompt for credentials:i:1
+uu-remote-ubuntu-bridge/scripts/macos-connect-7090.applescript
 ```
 
-Double-click `Ubuntu Physical Desktop.lnk` to open the current Ubuntu desktop.
-The first connection may still ask for the RDP credential; this is expected and
-is separate from the Windows account password.
+The compiled app on the validated Mac is:
 
-## Why 3389 Shows Another Session
+```text
+/Users/lachlan/Desktop/Connect to 7090.app
+```
 
-GNOME exposes two different RDP behaviors:
+It provides four explicit choices:
 
-| Port | Service | Behavior |
+| Choice | Behavior |
+| --- | --- |
+| Current Desktop | Opens the existing physical GNOME desktop through VNC over SSH |
+| Separate Login (RDP) | Opens GNOME Remote Login on port `3389` |
+| Terminal (SSH) | Opens `ssh glassagent-ubuntu` |
+| Connection Test | Checks SSH, separate-login RDP, and relay readiness |
+
+The first VNC connection can ask for the bridge credential. Store it in the
+Mac login keychain when Screen Sharing offers **Remember password**. The SSH
+connection itself is key-only.
+
+## Why the Old Mac Shortcut Was Black
+
+The obsolete shortcut forwarded Mac port `15900` to Ubuntu `[::1]:5900`.
+That listener belonged to an unrelated `x11vnc` process on Xvfb display
+`:42`, not the physical GNOME desktop. The tunnel worked, but it faithfully
+returned a black or stale virtual display.
+
+Do not diagnose that symptom by enabling another VNC server or restarting the
+UU bridge. Check the tunnel destination first:
+
+```bash
+ssh glassagent-ubuntu \
+  '~/.local/bin/uu-remote-console relay-port'
+```
+
+The maintained relay reports `5922`. While Screen Sharing is connected,
+Ubuntu must show an IPv4 loopback-only listener:
+
+```bash
+ss -ltnp | grep '127.0.0.1:5922'
+```
+
+The Mac normally has both IPv4 and IPv6 localhost listeners on `15922`.
+Screen Sharing may try IPv6 first, while SSH still forwards to Ubuntu's
+IPv4-only protected listener.
+
+## Why Direct RDP Does Not Join
+
+The current endpoint meanings are:
+
+| Port | Ownership | Behavior |
 | --- | --- | --- |
-| `3389` | system Remote Login | authenticates through GDM and creates a remote/headless session |
-| `3390` | ordinary user Desktop Sharing | normally shares an already-running GNOME desktop |
-| `3391` | UU bridge Desktop Sharing | shares this workstation's active Wayland desktop and feeds the UU relay |
+| `3389` | GNOME system Remote Login | Creates or resumes a separate remote login |
+| `3391` | UU bridge, potentially in its application-profile namespace | Internal current-desktop hop already occupied by Wine SDL FreeRDP |
+| `5922` | Temporary loopback x11vnc | Exposes only the existing relay window while an SSH-launched viewer is connected |
 
-The UU bridge must run its GNOME Remote Desktop daemon on the same desktop
-session bus as the physical Wayland session. On this workstation that daemon
-owns `3391`, so it is also the correct direct RDP endpoint. Starting another
-user GNOME RDP daemon on `3390` would compete for the same session bus and can
-interrupt or replace the working relay.
+A direct Mac or Windows RDP connection to `3391` can be rejected or can
+compete with the bridge because GNOME Desktop Sharing already has its relay
+client. Port `3389` remains useful, but it is deliberately labeled
+**Separate Login (RDP)** because it is not the physical desktop.
 
-Do not use `3389` when the goal is to control the desktop already on the
-monitor. The “another session” or “Session Already Running” message is the
-expected result of using the Remote Login endpoint while the local session is
-active.
+Older notes and shortcuts that treated LAN port `3391` as a second public
+client endpoint describe a previous service arrangement. Do not stop the
+working internal relay just to make that historical path available.
 
-## Current Service Arrangement
+## UU Management App Without Recursion
 
-The intended live state is:
+The Ubuntu desktop launcher now runs:
 
-```text
-uu-remote-bridge.service                 active, enabled
-gnome-remote-desktop-daemon --rdp-port 3391  active
-gnome-remote-desktop-headless.service    disabled
-gnome-remote-desktop.service             disabled while UU owns the session bus
-system GNOME Remote Desktop daemon       listening on 3389
+```bash
+uu-remote open
 ```
 
-The system daemon on `3389` may remain listening. That does not change the
-meaning of `3391`; clients must specify the physical-desktop port explicitly.
+It opens a normal local TigerVNC window containing only UU's management
+window. It does not open the full private Xvfb desktop or the noVNC diagnostic
+page, so the physical desktop does not mirror itself recursively.
 
-The UU bridge was left running during setup. The final health check showed:
+All Wine processes in the UU prefix must stay on the same private X display.
+Wine foreground state is prefix-wide. Moving only `GameViewer.exe` to the
+physical display leaves video working but causes the input broker to report:
 
 ```text
-uu-remote-bridge.service: active/running
-NRestarts: 0
-TCP 3391: listening on all interfaces
+focus=timeout result=0 error=21
 ```
+
+That state rejects both keyboard and pointer input. The single-window sidecar
+keeps the actual UU process on the private display, forwards only its window
+to the local desktop, and restores focus to `Ubuntu-Desktop-Relay` when the
+management viewer closes.
 
 ## Verification
 
-On Ubuntu:
+Run the source-aware bridge verifier on Ubuntu:
 
 ```bash
-ss -ltnp | grep ':3391'
-systemctl --user show uu-remote-bridge.service \
-  -p ActiveState -p SubState -p NRestarts
+cd ~/Projects/uu-remote-ubuntu-bridge
+./scripts/verify.sh --quick
 ```
 
-Expected output includes a GNOME Remote Desktop process on `3391`, an active
-bridge, and `NRestarts=0`.
+The checker supports both the ordinary user unit and the Astrill
+application-profile system unit. For the latter it verifies port `3391` in
+the GNOME RDP process's network namespace through `/proc/PID/net/tcp*`; the
+private listener does not need to appear in the host namespace.
 
-From Windows PowerShell:
+Useful live checks:
 
-```powershell
-Test-NetConnection 192.168.1.227 -Port 3391 -InformationLevel Quiet
+```bash
+systemctl is-active \
+  'io.github.lachlanchen.AstrillLazyRouter.ApplicationProfile@uuremote.service'
+
+pgrep -af 'GameViewerServer.exe|sdl-freerdp.exe'
+
+broker=~/.local/share/wineprefixes/uu-remote/drive_c/users/$USER/Temp/uu-input-broker.log
+grep 'focus=' "$broker" | tail -n 20
 ```
 
-The result should be `True`.
+Fresh controller input should report `focus=ready`, `result=1`, and
+`error=0`. Historical timeout records can remain earlier in the same log.
 
 ## Recovery Rules
 
-Do not stop or restart `uu-remote-bridge.service` while the physical desktop
-is being used unless a short UU interruption is acceptable. Do not enable the
-headless user service on `3391` or start a second GNOME sharing daemon on the
-same session bus.
+Do not restart the bridge merely because a desktop viewer is black. First
+close the stale viewer and use **Connection Test** in the Mac app.
 
-If the shortcut stops working, check the endpoint before changing services:
+If Ubuntu is viewing the Mac in Remmina while the Mac is viewing Ubuntu, the
+two windows form a recursive image. Close the Ubuntu-to-Mac Remmina window;
+neither endpoint is actually blank.
 
-```powershell
-Test-NetConnection 192.168.1.227 -Port 3391
-```
+The relay helper is intentionally bounded:
 
-Then check the Ubuntu bridge:
+1. It binds x11vnc only to Ubuntu `127.0.0.1`.
+2. It requires VNC authentication in addition to key-only SSH.
+3. It waits for a sustained viewer instead of mistaking readiness probes for
+   a session.
+4. It keeps `Ubuntu-Desktop-Relay` focused while connected.
+5. It exits shortly after the final viewer disconnects.
 
-```bash
-systemctl --user status uu-remote-bridge.service --no-pager
-journalctl --user -u uu-remote-bridge.service -n 80 --no-pager
-```
-
-The saved RDP settings snapshot from the transition is kept outside the
-repository at:
-
-```text
-~/.local/state/rdp-desktop-sharing/
-```
-
-Never commit RDP passwords, SSH private keys, keyring exports, or Windows
-credential-manager data.
+Never commit VNC passwords, SSH private keys, keyring exports, or Mac keychain
+data.
 
 ## SSH Companion
 
-The Windows-to-Ubuntu SSH key was installed without changing the Ubuntu
-password. The Windows SSH config alias is:
+From the Mac:
 
-```powershell
-ssh ubuntu-7090
+```bash
+ssh glassagent-ubuntu
 ```
 
-The alias uses the Windows user's private key at:
-
-```text
-%USERPROFILE%\.ssh\id_ed25519_ubuntu_7090
-```
-
-The private key must remain only on the Windows account and must never be
-committed to this repository.
+The alias uses a dedicated private key stored only on the Mac. Ubuntu has the
+matching public key in `~/.ssh/authorized_keys`; no password is required.
