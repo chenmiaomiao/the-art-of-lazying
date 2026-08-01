@@ -72,6 +72,54 @@ Do not delete `/System/Volumes/Update` or its non-purgeable APFS snapshot by
 hand. The supported `softwareupdate` CLI has no cancel-staged-update command,
 and manually removing protected update state risks the current boot volume.
 
+## 2026-08-01 7050 Hard-Freeze Follow-up
+
+Later evidence supersedes the earlier tentative classification. The guard
+recorded 1 GiB free at 01:01 and 0 GiB free from 01:05 through 01:44:58. The
+unified log stopped at 01:58:42 and did not resume until the physical reboot at
+15:40. There was no panic. The final three minutes contained 2,549 `rapportd`
+and 1,089 `airportd` records on a machine with Ethernet but no Wi-Fi hardware
+port. APFS exhaustion is the verified primary trigger; the Ethernet-only
+Continuity/CoreWLAN storm is a verified terminal amplifier.
+
+The reversible Ethernet-only policy now disables per-user `rapportd`,
+`sharingd`, and `bluetoothuserd`, Handoff, AirDrop, and application relaunch.
+After `brctl status` reported the main CloudDocs container caught-up and
+consistent, it also disabled per-user `bird` and `FileProvider` at the owner's
+request. Photos remains enabled with optimized storage. Machine identity is
+read from a private mode-600 configuration rather than committed to Git.
+
+The guard still warns below 25 GiB. It now shuts down Simulator devices below
+15 GiB and, below 8 GiB, performs a six-hour-cooldown cleanup limited to
+reproducible developer/cache data. It never deletes projects, cloud documents,
+Codex state, UU state, simulator runtimes, or APFS volumes.
+
+An explicit cleanup reclaimed about 16.6 GiB from the active Sequoia account.
+A second guarded cleanup removed the obsolete Sequoia installer, stale sleep
+image, migration leftovers, and caches from the Monterey fallback, reclaiming
+17,441 MiB. Shared APFS free space then held at 46.2 GiB over a five-sample
+remote-service check. Monterey 12.7.6, its account, SSH, and UU state remain.
+
+A final allow-listed pass removed CloudKit cache and closed GlassAgent logs.
+The authoritative APFS result was 188.2 GB used and 52.1 GB free (about 48.5
+GiB). Directory cleanup totals can differ from APFS free-space movement while
+the operating system allocates data concurrently.
+
+The fallback Data volume has a repeatable APFS directory-statistics mismatch.
+Live verification exits successfully but defers repair because Sequoia shares
+the mounted container. Run Disk Utility First Aid from Recovery during a
+planned maintenance window; do not erase the fallback or change EFI for this
+metadata warning.
+
+The reusable Recovery helper is
+`scripts/repair-optiplex-7050-apfs-from-recovery.sh`. It takes explicit
+`--container diskN` and `--data diskNsN` arguments because Recovery disk
+numbers are not stable. It validates membership and the APFS Data role, checks
+all command paths, refuses the active root, avoids forced unmounts, and logs
+repair plus post-repair verification under `/tmp`.
+Copy the script itself to `/tmp` before running it so unmounting the target
+container cannot remove the script source midway through the repair.
+
 ## Changes Applied
 
 Both Macs now have the following power policy:
