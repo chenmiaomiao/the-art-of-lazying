@@ -8,7 +8,7 @@ Small, practical workflows and shell tricks that improve daily engineering speed
 - [codex-cli](./codex-cli/README.md): Codex CLI overrides, defaults, and session migration helpers.
 - [desktop-tiling](./desktop-tiling/README.md): GNOME desktop tiling workflows, including Tiling Shell.
 - [hackintosh](./hackintosh/README.md): machine-specific post-install, multi-boot, remote-access, and staged-upgrade workflows with explicit rollback boundaries.
-- [linux-hardware](./linux-hardware/README.md): workstation hardware fixes such as USB webcam access inside RDP.
+- [linux-hardware](./linux-hardware/README.md): workstation hardware fixes such as USB webcam access inside RDP, memory-pressure diagnosis, and safe NVIDIA driver refresh without rebooting.
 - [linux-shutdown](./linux-shutdown/README.md): systemd ordering and busy-unmount fixes for mounted home subpaths.
 - [networking](./networking/README.md): practical home-lab networking notes, including Pi Wi-Fi-to-LAN routing and workstation default-route switching.
 - [nutstore-inotify-limit-on-ubuntu.md](./nutstore-inotify-limit-on-ubuntu.md): stop Nutstore's repeated synced-folder-limit popup by fixing inotify instance and watch limits cleanly.

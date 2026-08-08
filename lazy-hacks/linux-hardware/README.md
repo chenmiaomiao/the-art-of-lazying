@@ -19,3 +19,8 @@ Operational notes for workstation hardware that needs small Linux-side fixes.
   - shorten daemon lifetime and cap Kotlin/Gradle concurrency
   - add swap, `systemd-oomd`, and UU service containment without closing
     healthy remote sessions
+- [nvidia-driver-mismatch-live-refresh.md](./nvidia-driver-mismatch-live-refresh.md)
+  - distinguish an NVML/kernel API mismatch from an actual GPU hardware fault
+  - safely refresh an idle NVIDIA module stack without rebooting an Intel-led
+    workstation
+  - add a non-looping APT check, keep XRDP on Intel, and validate CUDA/VRAM
