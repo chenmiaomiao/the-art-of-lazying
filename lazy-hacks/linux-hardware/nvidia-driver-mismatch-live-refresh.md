@@ -314,6 +314,11 @@ The second GPU remained deliberately unbound, and CPU-offlining policy was not
 changed. This separation matters: repair one variable, validate it, and only
 then change multi-GPU topology.
 
+The second card was later reintroduced as a separate controlled experiment.
+See [Safely Re-enable a Second NVIDIA GPU After Freeze Troubleshooting](./dual-nvidia-gpu-staged-reenable.md)
+for reversible PCI binding, conservative board-power limits, isolated and
+dual-GPU validation, and interpretation of host-memory large-page fallbacks.
+
 ## Remaining risks
 
 - A live reload cannot be made universally safe while arbitrary jobs use the

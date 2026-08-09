@@ -24,3 +24,9 @@ Operational notes for workstation hardware that needs small Linux-side fixes.
   - safely refresh an idle NVIDIA module stack without rebooting an Intel-led
     workstation
   - add a non-looping APT check, keep XRDP on Intel, and validate CUDA/VRAM
+- [dual-nvidia-gpu-staged-reenable.md](./dual-nvidia-gpu-staged-reenable.md)
+  - reintroduce a second GPU without changing the stable CPU baseline
+  - fix reversible sysfs binding, cap dual-GPU power, and test one card before
+    bounded simultaneous load
+  - distinguish PCIe/GPU failure from host-memory fragmentation and remote
+    audio artifacts
