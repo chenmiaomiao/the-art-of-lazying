@@ -43,9 +43,9 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - `auto`, `physical`, and exact-display rollback or diagnostic modes
 
 - [uu-remote-speaker-pulse-pipewire-diagnosis.md](./uu-remote-speaker-pulse-pipewire-diagnosis.md)
-  - how to prove whether a sound heard during UU actually belongs to UU
+  - how to prove whether unwanted sound belongs to UU, another app, or both at different times
   - identify a PipeWire stream by process, media class, target sink, and live process command
-  - mute and reroute only one application's channels without restarting the desktop or audio stack
+  - isolate UU playback and capture from physical speakers and microphones without restarting the desktop
   - use Unreal `-nosound` for deterministic remote previews while retaining an explicit audio override
 
 - [uu-remote-safe-upgrade-runbook.md](./uu-remote-safe-upgrade-runbook.md)
