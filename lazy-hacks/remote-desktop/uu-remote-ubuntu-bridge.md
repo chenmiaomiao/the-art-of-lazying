@@ -313,6 +313,16 @@ GDM, GNOME Shell, Xorg, or applications. See
 for diagnosis, acceptance evidence, rollback, and the distinction between
 desktop identity and relay geometry.
 
+### A sound heard during UU may belong to another app
+
+The nested FreeRDP relay is launched with `/audio-mode:2`; it should not play
+the shared desktop back into the host speakers. If a physical speaker pulses,
+inspect `wpctl status` and `wpctl inspect` before changing UU. One validated
+incident was an Unreal `SHI` process holding a six-channel USB S/PDIF stream,
+not UU. Muting and rerouting only that node released the physical sink while
+all desktop and bridge processes remained alive. See
+[Diagnose speaker pulses during a UU session](./uu-remote-speaker-pulse-pipewire-diagnosis.md).
+
 Rollback does not delete UU login state:
 
 ```bash

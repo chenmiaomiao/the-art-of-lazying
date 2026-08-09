@@ -42,6 +42,12 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - how to restart only the UU bridge and prove that XRDP, GNOME Shell, Xorg, and open windows were preserved
   - `auto`, `physical`, and exact-display rollback or diagnostic modes
 
+- [uu-remote-speaker-pulse-pipewire-diagnosis.md](./uu-remote-speaker-pulse-pipewire-diagnosis.md)
+  - how to prove whether a sound heard during UU actually belongs to UU
+  - identify a PipeWire stream by process, media class, target sink, and live process command
+  - mute and reroute only one application's channels without restarting the desktop or audio stack
+  - use Unreal `-nosound` for deterministic remote previews while retaining an explicit audio override
+
 - [uu-remote-safe-upgrade-runbook.md](./uu-remote-safe-upgrade-runbook.md)
   - distinguish a public bridge-source refresh from proprietary UU promotion
   - preserve login, keyboard route, XRDP, and complete-prefix rollback
