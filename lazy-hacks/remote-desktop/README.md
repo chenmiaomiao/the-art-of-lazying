@@ -36,6 +36,12 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - the reusable guarded 4.33-to-4.34 upgrade, preserved login/input profile,
     XRDP-independent transaction, and complete-prefix rollback
 
+- [uu-remote-same-xrdp-desktop.md](./uu-remote-same-xrdp-desktop.md)
+  - why UU can show a clean physical desktop while all windows remain alive in XRDP
+  - how persistent `xrdp` targeting follows the session by logind identity instead of a temporary display number
+  - how to restart only the UU bridge and prove that XRDP, GNOME Shell, Xorg, and open windows were preserved
+  - `auto`, `physical`, and exact-display rollback or diagnostic modes
+
 - [uu-remote-safe-upgrade-runbook.md](./uu-remote-safe-upgrade-runbook.md)
   - distinguish a public bridge-source refresh from proprietary UU promotion
   - preserve login, keyboard route, XRDP, and complete-prefix rollback

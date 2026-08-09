@@ -294,6 +294,25 @@ The choices are stored in
 `~/.config/uu-remote-bridge/environment`. A later plain installer run
 preserves them.
 
+### Select the GNOME desktop independently
+
+On a multi-session workstation, the physical/GDM desktop and a long-lived
+XRDP desktop can both have a live GNOME Shell. Pin UU to XRDP by session
+identity instead of a temporary `:10` or `:11` number:
+
+```bash
+./install.sh --skip-packages --skip-account-login \
+  --desktop-target xrdp
+```
+
+`auto` preserves historical discovery, `physical` selects the monitor/seat
+desktop, and `:N` selects one exact X display. Explicit targets wait rather
+than falling back to a different desktop. The selector does not restart XRDP,
+GDM, GNOME Shell, Xorg, or applications. See
+[Keep UU Remote on the same existing XRDP desktop](./uu-remote-same-xrdp-desktop.md)
+for diagnosis, acceptance evidence, rollback, and the distinction between
+desktop identity and relay geometry.
+
 Rollback does not delete UU login state:
 
 ```bash
