@@ -170,10 +170,10 @@ The helper:
 - reads SQLite in read-only mode for picking;
 - uses `idx_threads_source` for interactive views;
 - uses recency/cwd indexes for all-source views;
-- limits the result set before rendering;
+- limits the result set before rendering (500 by default, configurable with `CODEX_RESUME_PICKER_LIMIT`);
 - does not scan rollout JSONL files.
 
-Measured on 2026-08-10, exact, partial, `--all`, and `--all --include-non-interactive` queries each completed in about 0.06 seconds with a warm filesystem cache.
+Measured on 2026-08-10, exact, partial, and normal `--all` queries completed in about 0.06 seconds with a warm filesystem cache. Loading 500 rows with `--all --include-non-interactive` completed in about 0.22 seconds.
 
 ## Enable, disable, and reload
 
@@ -182,6 +182,7 @@ The picker is enabled on both native Linux and WSL:
 ```bash
 CODEX_RESUME_PICKER_ENABLE_NATIVE=1
 CODEX_RESUME_PICKER_ENABLE_WSL=1
+CODEX_RESUME_PICKER_LIMIT=500
 ```
 
 Set the platform value to `0` before sourcing the wrapper to default to native resume behavior. `--native` is the simpler one-command bypass.
