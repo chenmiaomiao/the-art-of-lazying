@@ -59,6 +59,45 @@ Expected values are `none`, `0`, and `1`, followed by no GPU-renderer process.
 - Do not run concurrent simulators on the affected Intel graphics path.
 - Preserve diagnostic reports privately; publish only redacted facts.
 
+## Bound Background Analysis During Release Work
+
+The same incident also had `mediaanalysisd` near 140 percent CPU for almost
+three hours and `mds_stores` around 20-34 percent CPU. They were not the GPU
+reset cause, but they increased thermal and scheduling pressure while Xcode
+validated a protected installation.
+
+For one bounded archive or upload, inspect the live process IDs, stop Photos
+analysis, and lower Spotlight's priority:
+
+```bash
+media_pid="$(pgrep -x mediaanalysisd | head -n 1)"
+mds_pid="$(pgrep -x mds_stores | head -n 1)"
+test -z "$media_pid" || kill -STOP "$media_pid"
+test -z "$mds_pid" || sudo renice 20 -p "$mds_pid"
+```
+
+Always restore normal behavior when the operation ends:
+
+```bash
+test -z "$media_pid" || kill -CONT "$media_pid"
+test -z "$mds_pid" || sudo renice 0 -p "$mds_pid"
+```
+
+Do not store process IDs across reboots and do not leave `mediaanalysisd`
+stopped permanently.
+
+For store work, keep network isolation equally narrow. In the verified
+EchoMind run, Google Play traffic used an ephemeral Ubuntu route limited to
+Google OAuth and Android Publisher on TCP 443. The iOS path stayed on the Mac,
+used `skip-simulator`, and did not launch the GPU renderer. VPN routing did not
+cover Codex, SSH, the Mac, or unrelated traffic.
+
+In the verified 2026-08-10 release window, the headless Mac path validated and
+uploaded a 9,588,830-byte iOS/watchOS IPA without errors. Provider readback
+reported the exact build `VALID`; no Simulator renderer launched and no new
+GPU-reset report appeared. Photos analysis was resumed and Spotlight returned
+to nice level 0 immediately afterward.
+
 Restore the default renderer only for a deliberate bounded diagnostic:
 
 ```bash
