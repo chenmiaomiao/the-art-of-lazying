@@ -157,6 +157,29 @@ Recheck the three renderer defaults and confirm zero booted devices. Idle
 CoreSimulator registration services are not equivalent to a booted virtual
 device; keep the UI and Metal renderer closed.
 
+## Recover After Another Frozen Loading Screen
+
+Do not reopen the UI just to test whether the reboot fixed it. In a later
+verified recovery, LAN SSH remained healthy and the host had no booted virtual
+device or active Metal renderer, although two stale CoreSimulator service
+trees had re-registered. The bounded recovery was:
+
+```bash
+xcrun simctl shutdown all
+killall Simulator SimMetalHost SimRenderServer \
+  com.apple.CoreSimulator.CoreSimulatorService \
+  SimLaunchHost.x86 SimulatorTrampoline 2>/dev/null || true
+```
+
+Then verify the renderer defaults and query only boot state. `simctl` may
+restart idle CoreSimulator registration helpers; this is expected. The
+failure boundary is a booted device, Simulator UI, or active renderer.
+
+In that recovery, the machine still had exactly four historical GPU-reset
+reports and no new report for the latest stalled loading screen. Absence of a
+new report is not proof that the unsupported graphics path is stable. Continue
+with command-line builds and physical devices.
+
 ## Route One Phone Operation, Then Remove It
 
 An external test phone needs source-scoped routing at the router because a
