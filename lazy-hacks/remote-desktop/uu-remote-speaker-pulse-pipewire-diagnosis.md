@@ -111,28 +111,16 @@ PipeWire reconnects a stream.
 
 `wpctl set-mute` stores the per-application input and output mute through
 WirePlumber's stream-restore mechanism. Do not edit that state database by
-hand. Add a second service-scoped boundary for future bridge processes:
+hand. Live mute/link changes are useful for diagnosis, but do not persist
+`PULSE_SINK=xrdp-sink` or `PULSE_SOURCE=xrdp-source` in the UU service.
 
-```ini
-# ~/.config/systemd/user/uu-remote-bridge.service.d/20-audio-isolation.conf
-[Service]
-Environment="PULSE_SINK=xrdp-sink"
-Environment="PULSE_SOURCE=xrdp-source"
-```
-
-Apply the unit metadata without disconnecting the live bridge:
-
-```bash
-systemctl --user daemon-reload
-systemctl --user show uu-remote-bridge.service \
-  -p ActiveState -p ExecMainStartTimestamp -p Environment
-```
-
-The running process retains its old environment until its next normal restart;
-the live mute and link changes take effect immediately. On the validated host,
-both UU audio streams then closed, the final overrun was logged at 23:17:18,
-the C922 source suspended, and the physical USB output remained idle. The UU
-service retained the same process and start timestamp.
+That environment override was tested and rejected on 2026-08-10. The
+multi-session workstation had many stale XRDP PipeWire modules exporting the
+same node names. The UU server completed account login and the HTTP room
+request, but Wine then hung at `Attempting to use the Windows Core Audio
+APIs...`. It never created its two media factories, never connected signaling,
+and therefore disappeared from every other UU client despite superficially
+healthy room-request logs.
 
 ## Close the Hardware PCM, Not Just the Mixer Stream
 
@@ -161,8 +149,6 @@ this bridge, use the bridge's opt-in prefix boundary:
 # ~/.config/systemd/user/uu-remote-bridge.service.d/20-audio-isolation.conf
 [Service]
 Environment="UURB_UU_AUDIO=off"
-Environment="PULSE_SINK=xrdp-sink"
-Environment="PULSE_SOURCE=xrdp-source"
 ```
 
 Reload systemd and restart only the UU bridge during a disconnected window:
@@ -179,6 +165,9 @@ prefixes unchanged. The compatibility default is `UURB_UU_AUDIO=system`.
 On the validated host the existing XRDP session and all open applications
 survived the scoped bridge restart. The new UU server had zero PipeWire audio
 nodes, the physical PCM remained `closed`, and all live bridge checks passed.
+Unlike the rejected forced-endpoint setup, this mode also completed both
+WebRTC media factories, reported `signal connection success`, reached
+`room_state_changed: created`, and advertised `LACHLANSERVER` as `CONNECTED`.
 
 ## Prevent It on the Next Unreal Preview
 
@@ -211,7 +200,7 @@ cannot mute unrelated SDL applications.
 - both later UU input/output streams were muted and left the physical graph;
 - the webcam microphone returned to suspended state;
 - the continuous PipeWire overrun messages stopped;
-- a service drop-in redirects future UU Wine audio to XRDP virtual endpoints;
+- no forced XRDP Pulse endpoint names remain in the service environment;
 - UU remained active;
 - XRDP, GNOME Shell, and open windows were not restarted;
 - future SHI remote previews start without an audio device unless sound is
