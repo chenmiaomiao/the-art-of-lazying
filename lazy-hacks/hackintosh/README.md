@@ -44,6 +44,10 @@ private keys, and complete EFI trees outside this public repository.
     without changing account or privacy state;
   - diagnose the 7050 optical SATA fault and stage a guarded SSD TRIM fix;
   - verify Monterey as the 3040's persistent OpenCore default.
+- [Intel CoreSimulator GPU-hang safe mode](./intel-coresimulator-gpu-hang-safe-mode.md)
+  - distinguish a simulator Metal hang from memory or disk pressure;
+  - disable virtual-framebuffer compositing without deleting simulator data;
+  - keep archive and store work headless while physical devices provide UI QA.
 - [OptiPlex 3040 Windows 7 UEFI and SSH repair](./optiplex-3040-win7-uefi-ssh-repair.md)
   - diagnose GPT conversion damage as unresolved active BCD devices;
   - repair Win7 offline from the stable Win10 control plane with rollback;
