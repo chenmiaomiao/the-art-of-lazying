@@ -94,9 +94,17 @@ cover Codex, SSH, the Mac, or unrelated traffic.
 
 In the verified 2026-08-10 release window, the headless Mac path validated and
 uploaded a 9,588,830-byte iOS/watchOS IPA without errors. Provider readback
-reported the exact build `VALID`; no Simulator renderer launched and no new
-GPU-reset report appeared. Photos analysis was resumed and Spotlight returned
-to nice level 0 immediately afterward.
+reported the exact build `VALID`; the guarded public-beta workflow then
+attached it and read back `APPROVED` with the existing public TestFlight link
+enabled. Formal App Store submission remained a separate closed gate. No
+Simulator renderer launched and no new GPU-reset report appeared. Photos
+analysis was resumed and Spotlight returned to nice level 0 immediately
+afterward.
+
+More than five hours after reboot, a second read-only check still showed zero
+booted simulators, no Simulator UI or renderer, about 48 GiB free, and no
+active Xcode build or device-diagnostic job. Keep that headless state while
+using App Store Connect APIs and physical devices.
 
 ## SSH Signing Is An Audit-Session Problem
 
