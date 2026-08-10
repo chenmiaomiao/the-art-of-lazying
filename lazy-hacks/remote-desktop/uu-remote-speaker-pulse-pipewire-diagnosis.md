@@ -81,6 +81,12 @@ application name. After the move, `pw-top` should show the physical sink idle.
 This preserves the game window and process. It also avoids restarting
 PipeWire, WirePlumber, XRDP, GNOME Shell, or UU.
 
+Mute alone is not proof that the device is inactive. Two later regenerated
+SHI review builds restored as muted but stayed linked to the S/PDIF sink, so
+ALSA still reported the playback PCM as `RUNNING`. Rediscover and move every
+exact live SHI link, and make generated launch commands carry `-NoSound`;
+editing one older package launcher cannot govern future build directories.
+
 ## When UU Itself Opens Physical Audio
 
 After the bridge restarted at 22:58, a second inspection showed two new
@@ -128,6 +134,52 @@ both UU audio streams then closed, the final overrun was logged at 23:17:18,
 the C922 source suspended, and the physical USB output remained idle. The UU
 service retained the same process and start timestamp.
 
+## Close the Hardware PCM, Not Just the Mixer Stream
+
+For USB audio hardware that keeps its clock active while an idle stream is
+linked, use the ALSA PCM state as the acceptance check:
+
+```bash
+cat /proc/asound/card*/pcm*p/sub*/status
+fuser -v /dev/snd/*
+```
+
+On the affected workstation the relevant endpoint was the exact sink
+`alsa_output.usb-Generic_USB_Audio-00.HiFi__hw_Audio_2__sink`. An
+exact-device WirePlumber rule enabled `node.pause-on-idle` with a short suspend
+timeout. Do not apply this to all sound devices. After removing all physical
+links and loading that scoped rule,
+`/proc/asound/card3/pcm2p/sub0/status` read `closed`.
+
+## Disable UU's Own Audio Channel When It Is Unwanted
+
+Even with the hardware PCM closed, UU's proprietary log showed that every
+controller connection calls `startAudioCapture`. If audio is unnecessary for
+this bridge, use the bridge's opt-in prefix boundary:
+
+```ini
+# ~/.config/systemd/user/uu-remote-bridge.service.d/20-audio-isolation.conf
+[Service]
+Environment="UURB_UU_AUDIO=off"
+Environment="PULSE_SINK=xrdp-sink"
+Environment="PULSE_SOURCE=xrdp-source"
+```
+
+Reload systemd and restart only the UU bridge during a disconnected window:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user restart uu-remote-bridge.service
+```
+
+`UURB_UU_AUDIO=off` maps to `winepulse.drv=d` inside UU's dedicated Wine
+prefix. It leaves browsers, native Ubuntu audio, XRDP, and unrelated Wine
+prefixes unchanged. The compatibility default is `UURB_UU_AUDIO=system`.
+
+On the validated host the existing XRDP session and all open applications
+survived the scoped bridge restart. The new UU server had zero PipeWire audio
+nodes, the physical PCM remained `closed`, and all live bridge checks passed.
+
 ## Prevent It on the Next Unreal Preview
 
 Use Unreal's supported runtime option:
@@ -164,9 +216,18 @@ cannot mute unrelated SDL applications.
 - XRDP, GNOME Shell, and open windows were not restarted;
 - future SHI remote previews start without an audio device unless sound is
   explicitly requested.
+- the final ALSA playback state is `closed`, not merely muted or idle;
+- UU's dedicated Wine process uses `UURB_UU_AUDIO=off`, preventing its
+  per-connection WebRTC audio capture path.
 
 ## Related Notes
 
 - [UU Remote Ubuntu bridge](./uu-remote-ubuntu-bridge.md)
 - [Keep UU on the existing XRDP desktop](./uu-remote-same-xrdp-desktop.md)
 - [Bridge troubleshooting](../../code/uu-remote-ubuntu-bridge/docs/troubleshooting.md)
+
+## Upstream References
+
+- [WirePlumber ALSA device and node properties](https://pipewire.pages.freedesktop.org/wireplumber/daemon/configuration/alsa.html)
+- [WirePlumber configuration fragments and array merging](https://pipewire.pages.freedesktop.org/wireplumber/daemon/configuration/modifying_configuration.html)
+- [PipeWire property keys](https://pipewire.pages.freedesktop.org/pipewire/group__pw__keys.html)

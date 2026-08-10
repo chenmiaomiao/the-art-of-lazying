@@ -46,6 +46,7 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - how to prove whether unwanted sound belongs to UU, another app, or both at different times
   - identify a PipeWire stream by process, media class, target sink, and live process command
   - isolate UU playback and capture from physical speakers and microphones without restarting the desktop
+  - distinguish a muted stream from a genuinely closed ALSA PCM and disable UU-only Wine audio when unwanted
   - use Unreal `-nosound` for deterministic remote previews while retaining an explicit audio override
 
 - [uu-remote-safe-upgrade-runbook.md](./uu-remote-safe-upgrade-runbook.md)

@@ -324,7 +324,11 @@ Wine's `GameViewerServer.exe` also opened an output to that physical device
 and an active input from the C922 webcam microphone. The latter emitted
 continuous PipeWire overrun recoveries. Muting and rerouting only those
 identified streams released both physical devices while all desktop and
-bridge processes remained alive. See
+bridge processes remained alive. A later check found muted regenerated SHI
+streams still holding the ALSA PCM in `RUNNING`; exact-device idle suspension
+closed it. For hosts that never need UU audio, `UURB_UU_AUDIO=off` disables
+Wine PulseAudio only inside UU's dedicated prefix while preserving browser,
+Ubuntu, XRDP, and other Wine audio. See
 [Diagnose speaker pulses during a UU session](./uu-remote-speaker-pulse-pipewire-diagnosis.md).
 
 Rollback does not delete UU login state:
