@@ -98,6 +98,36 @@ reported the exact build `VALID`; no Simulator renderer launched and no new
 GPU-reset report appeared. Photos analysis was resumed and Spotlight returned
 to nice level 0 immediately afterward.
 
+## SSH Signing Is An Audit-Session Problem
+
+After reboot, an SSH process may see valid development identities while
+`codesign` still fails with `errSecInternalComponent`. First unlock the login
+keychain and restore the signing partition list interactively. If direct SSH
+signing still fails, run the bounded build inside the already logged-in GUI
+audit session and drop privileges back to the console user:
+
+```bash
+console_user="$(stat -f '%Su' /dev/console)"
+console_uid="$(id -u "$console_user")"
+
+sudo launchctl asuser "$console_uid" \
+  sudo -u "$console_user" env \
+    HOME="/Users/$console_user" \
+    DEVELOPER_DIR=/path/to/Xcode.app/Contents/Developer \
+    xcodebuild <physical-device arguments>
+```
+
+This recovered signing for a physical iPad build without opening Simulator.
+The subsequent XCTest stopped because iPadOS timed out while enabling UI
+Automation; that is a device setup gate, not evidence that the graphics path
+is healthy enough to retry Simulator.
+
+Also watch for Xcode's failure diagnostics. A failed physical UI test may leave
+`xcodebuild` waiting on a ten-minute `devicectl diagnose` process. Inspect and
+end only that failed process tree, remove the temporary test runner, and restore
+any temporarily adjusted `mediaanalysisd` or `mds_stores` priority before the
+next release operation.
+
 Restore the default renderer only for a deliberate bounded diagnostic:
 
 ```bash
