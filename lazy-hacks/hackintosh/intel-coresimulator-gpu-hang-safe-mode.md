@@ -194,10 +194,20 @@ device. The reusable `astrill-lazy device-flow` command therefore requires:
 
 The EchoMind verification routed only the Play endpoints observed in phone
 logs on port 443. The genuine internal-testing listing then loaded, and the
-owner-scoped overlay was removed with an empty readback. Codex, SSH, Ubuntu,
-the Mac, and unrelated clients never entered this temporary route. Shared CDN
-IP addresses remain an IP-layer limitation, so keep the domain list minimal
-and the overlay lifetime short.
+owner-scoped overlay was removed with an empty readback. The overlay never
+classified Codex, SSH, Ubuntu, the Mac, or another client. A later audit did,
+however, find the native Astrill website policy in global mode. That separate
+default could still tunnel unmatched traffic. Back up the native site policy,
+set it to Direct-by-default include mode when task-only routing is intended,
+reconnect through the companion, and verify ordinary egress independently.
+Shared CDN IP addresses remain an IP-layer limitation, so keep the domain list
+minimal and the overlay lifetime short.
+
+The deeper physical-device result is documented in
+[`../networking/google-play-scoped-device-delivery.md`](../networking/google-play-scoped-device-delivery.md).
+The internal candidate and tester entitlement were valid, but the China-local
+signed CDN path did not complete a Play-signed install. That provider-delivery
+failure remains an open QA gate and is not evidence that the app binary failed.
 
 Restore the default renderer only for a deliberate bounded diagnostic:
 
