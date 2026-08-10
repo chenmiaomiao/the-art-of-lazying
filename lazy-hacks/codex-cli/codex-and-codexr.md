@@ -1,132 +1,201 @@
-# `codex` and `codexr` on This Linux Machine
+# Fast, Native-Compatible `codex` and `codexr`
 
-## Goal
-These shell wrappers make Codex behave consistently on this workstation.
+## Outcome
 
-Defaults enforced by the wrapper:
+These Linux/WSL wrappers keep the convenient exact-folder resume workflow without hiding current Codex features.
+
+- `codex` retains its normal commands and parameters.
+- `codexr` remains shorthand for `codex resume`.
+- `/rename` names are visible in the fast picker.
+- A saved name or UUID can be passed directly to native Codex.
+- Up/Down, `j`/`k`, paging, and live filtering work in the custom picker.
+- `--native` always opens the official Codex picker.
+- Empty sessions and non-interactive worker sessions are hidden by default.
+
+The wrapper still enforces the workstation defaults:
+
 - sandbox: `danger-full-access`
-- approval: `never`
+- approval policy: `never`
 
-Current implementation lives in:
-- `~/.bashrc`
+## Installed files
 
-## Main behaviors
+The active implementation is deliberately shared by shell functions and command shims:
 
-### `codex`
-- strips user-supplied mode args such as `-s` and `-a`
-- re-applies `-s danger-full-access -a never`
-- for non-resume commands, otherwise behaves like normal Codex
-- for `codex resume`, uses the custom resume picker when eligible
+- `~/scripts/codex_wrapper.sh` — argument handling and native Codex dispatch
+- `~/scripts/codex_session_tool.py` — indexed SQLite query, picker UI, and cwd migration
+- `~/scripts/sourced_codex_wrappers.sh` — shell functions
+- `~/bin/codex`, `~/bin/codexr`, `~/bin/codexmv` — non-interactive command shims
+- `~/.bashrc` — sources `sourced_codex_wrappers.sh`, with the former definitions retained only as an emergency fallback
 
-### `codexr`
-- shorthand wrapper around `codex resume`
-- same enforced mode defaults
-- with no args, opens the resume picker for the **exact current working directory**
-- with a session id, resumes that id directly
+This fixes the previous split where an interactive shell and `~/bin` could run different generations of the wrapper.
 
-### `cr`
-- alias to `codexr`
+## Native names and `/rename`
 
-## Resume picker behavior
-The wrapper picker reads from:
-- `~/.codex/state_5.sqlite`
+Current Codex stores a renamed chat in the `threads.name` field, separately from the older title/preview fields. The picker now chooses its display text in this order:
 
-By default it shows only interactive sessions:
-- `source IN ('cli','vscode')`
+1. saved name from `/rename`
+2. current preview
+3. title
+4. first user message
 
-It also filters out blank-title sessions.
+Named rows are shown as `Name: <saved name>`.
 
-Selection is currently:
-- numeric only
-- `q` to cancel
+Resume a named session directly:
 
-It does **not** select by typing a session name at the prompt.
+```bash
+codexr ChipAgent
+codex resume ChipAgent
+```
 
-## Supported resume modes
+The wrapper passes that value to native Codex, which accepts a session UUID or saved session name. After a session opens, rename it normally:
 
-### Exact current cwd
+```text
+/rename Better Name
+```
+
+The next fast-picker launch shows the new name. Picker selection itself uses the UUID, so duplicate or similar names cannot resume the wrong row.
+
+Official references:
+
+- [Codex CLI command reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
+- [`codex resume` and `/rename`](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
+
+## Picker controls
+
+```text
+Up / Down or j / k    move selection
+Enter                 resume selected session
+PageUp / PageDown     move one visible page
+Home / End            first or last row
+/                     start text filtering
+Backspace             edit filter
+Esc                   leave filtering, or cancel picker
+q                     cancel picker
+```
+
+Filtering searches the saved name, preview, title, first prompt, cwd, source, and UUID. It does not modify the Codex database.
+
+## Resume scopes
+
+### Exact current directory — default
+
 ```bash
 codexr
 codex resume
 ```
 
-This looks for sessions whose stored `cwd` exactly matches the current directory.
+Only sessions whose stored cwd exactly equals `pwd -P` are shown. A session under a child directory is not included.
 
-### Exact explicit cwd
+### Exact explicit directory
+
 ```bash
-codexr -C /home/lachlan/ProjectsLFS/Zhengyu
-codex resume --cwd /home/lachlan/ProjectsLFS/Zhengyu
+codexr -C /home/lachlan/ProjectsLFS/EchoMind
+codex resume --cd /home/lachlan/ProjectsLFS/EchoMind
 ```
 
-### All recent sessions
+`--cwd` is also accepted as a compatibility alias and normalized to native `--cd`.
+
+### All interactive sessions
+
 ```bash
 codexr --all
 codex resume --all
 ```
 
-### Include non-interactive sessions
+### Partial cwd lookup
+
 ```bash
-codex resume --include-non-interactive --all
+codexr --non-strict EchoMind
+codex resume --non-strict OpenHI
 ```
 
-That includes `exec`-style sessions too.
+`--non-strict` is a wrapper-only option. It performs a case-insensitive partial match against stored cwd values. Once the rows appear, `/` can further filter them by name or text.
 
-### Partial path search
+### Include workers and automation
+
 ```bash
-codexr --non-strict OpenHI
-codex resume --non-strict Organoid
+codexr --all --include-non-interactive
 ```
 
-`--non-strict` searches by **partial cwd match**.
+By default, the picker uses only `source IN ('cli', 'vscode')`. `--include-non-interactive` includes `exec`, subagent, and other background records.
 
-Important:
-- it matches against stored session `cwd`
-- it does not search by title text
-- it is most useful when a project path is only partly remembered
+### Native picker
 
-### Bypass the wrapper picker
 ```bash
 codexr --native
-codex resume --native
+codex resume --native --all
 ```
 
-This falls back to native Codex resume behavior.
+`--native` is consumed by the wrapper. All other applicable arguments go to the official picker.
 
-### Direct session id
+### Most recent session
+
 ```bash
-codexr 019ab50c-62e3-70e1-ab5d-a9104197d7a3
-codex resume 019ab50c-62e3-70e1-ab5d-a9104197d7a3
+codexr --last
 ```
 
-Direct ids bypass the custom picker and resume immediately.
+`--last`, help/version requests, an explicit name/UUID, and unknown future options automatically bypass the custom picker. This preserves native behavior and forward compatibility.
 
-## What the wrapper strips or preserves
-The wrapper strips only the mode arguments:
-- `-s`
-- `-a`
-- `--sandbox-mode`
-- `--sandbox_mode`
-- `--approval-policy`
-- `--approval_policy`
+## Parameter compatibility
 
-Everything else is passed through normally, except:
-- `--native` is consumed by the wrapper and not passed to Codex
+Options known to current `codex resume` are retained when a custom-picker row is selected, including:
 
-## Examples
+- `-m` / `--model`
+- `-p` / `--profile`
+- `-c` / `--config`
+- `--enable` / `--disable`
+- `-i` / `--image`
+- `--remote` and `--remote-auth-token-env`
+- `--strict-config`
+- `--oss` and `--local-provider`
+- `--add-dir`
+- `--search`
+- `--no-alt-screen`
+
+For example:
+
 ```bash
-codex
-codex chat
-codex resume
-codex resume --all
-codexr
-codexr --non-strict OpenHI
-codexr --native
-cr
+codexr -m gpt-5.6-sol --search --no-alt-screen
+codexr ChipAgent -m gpt-5.6-sol
 ```
 
-## Notes
-- On this machine, the wrapper is enabled on both native Linux and WSL.
-- If you change `~/.bashrc`, reload it with:
+Only mode arguments that conflict with the workstation policy are removed and replaced by `-s danger-full-access -a never`.
+
+## Why it stays fast
+
+The session database on this workstation is approximately 9.6 GB and contains more than 240,000 rows, mostly non-interactive execution records. A broad query can therefore be slow even though only a few hundred rows are human sessions.
+
+The helper:
+
+- reads SQLite in read-only mode for picking;
+- uses `idx_threads_source` for interactive views;
+- uses recency/cwd indexes for all-source views;
+- limits the result set before rendering;
+- does not scan rollout JSONL files.
+
+Measured on 2026-08-10, exact, partial, `--all`, and `--all --include-non-interactive` queries each completed in about 0.06 seconds with a warm filesystem cache.
+
+## Enable, disable, and reload
+
+The picker is enabled on both native Linux and WSL:
+
+```bash
+CODEX_RESUME_PICKER_ENABLE_NATIVE=1
+CODEX_RESUME_PICKER_ENABLE_WSL=1
+```
+
+Set the platform value to `0` before sourcing the wrapper to default to native resume behavior. `--native` is the simpler one-command bypass.
+
+Reload after an edit:
+
 ```bash
 source ~/.bashrc
+```
+
+Validate command resolution:
+
+```bash
+type codex codexr codexmv cr
+codex --version
+codexr --help
 ```

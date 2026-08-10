@@ -1,120 +1,116 @@
-# `codexmv`: Move Session Paths After a Repo Rename or Move
+# `codexmv`: Move Sessions After a Repository Rename
 
-## Goal
-`codexmv` fixes Codex resume after a project folder has been moved or renamed.
+## Purpose
 
-It rewrites stored session `cwd` values from an old path to a new path, then opens resume in the new location.
+`codexmv` changes the stored working-directory prefix for Codex sessions after a project folder is moved or renamed. It changes session metadata only; it does not move project files, alter the transcript, or remove a saved `/rename` name.
 
-Current implementation lives in:
-- `~/.bashrc`
+## Syntax
 
-## Command
 ```bash
-codexmv [--latest|-l] <oldpath> [newpath]
+codexmv [--latest|-l] [--no-resume] [--native] <oldpath> [newpath]
 ```
 
-Arguments:
-- `oldpath`: required
-- `newpath`: optional, defaults to current directory `.`
+- `oldpath` is required.
+- `newpath` defaults to the current directory.
+- `--latest` / `-l` resumes the newest migrated session directly.
+- `--no-resume` performs only the migration.
+- `--native` opens the official Codex picker after migration.
+- Default behavior opens the fast name-aware picker in the new directory.
 
-Modes:
-- default: migrate then open the normal resume picker in the new/current folder
-- `-l`, `--latest`: migrate then auto-resume the most recently updated migrated session
+## Examples
 
-## What gets migrated
-Database / metadata sources:
-- `~/.codex/state_5.sqlite`
-- `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
-
-Table/fields:
-- `threads.cwd`
-- JSONL structured `cwd` fields, especially `session_meta.payload.cwd` and `turn_context` payloads
-
-Matches:
-- exact path: `cwd == oldpath`
-- subtree: `cwd LIKE oldpath/%`
-
-Nested paths keep their suffix after migration.
-
-Example:
-- old: `/a/old/project/subdir`
-- new: `/b/new`
-- result: `/b/new/subdir`
-
-## Supported path styles
 ```bash
-codexmv ../oldpath
-codexmv ../oldpath .
-codexmv ~/Projects/old ~/Projects/new
-codexmv /home/lachlan/old /home/lachlan/new
-```
-
-All paths are normalized to absolute paths before the DB update.
-
-## Typical workflow
-### Move old sessions into current folder
-```bash
+# Old sibling folder -> current folder
 cd ~/ProjectsLFS/OpenHI
 codexmv ../nhi_reconstruction .
+
+# Explicit old and new roots
+codexmv ~/Projects/old-project ~/Projects/new-project
+
+# Move metadata without opening another Codex UI
+codexmv --no-resume ~/Projects/old-project ~/Projects/new-project
+
+# Resume the most recently active migrated session
+codexmv --latest ~/Projects/old-project ~/Projects/new-project
+
+# Use the official picker after moving
+codexmv --native ~/Projects/old-project ~/Projects/new-project
 ```
 
-### Move old sessions into an explicit new folder
-```bash
-codexmv ~/Projects/old ~/Projects/new
+Paths are expanded and normalized to absolute paths. Both an exact stored cwd and all descendants are migrated while preserving each descendant suffix.
+
+```text
+old root:  /a/old
+old cwd:   /a/old/service/api
+new root:  /b/new
+new cwd:   /b/new/service/api
 ```
 
-### Auto-resume latest migrated session
-```bash
-codexmv -l ../oldpath ./newpath
+## Current storage behavior
+
+The current Linux implementation updates:
+
+```text
+~/.codex/state_5.sqlite
+└── threads.cwd
 ```
 
-## What happens after migration
-Default mode:
-- prints migrated count
-- opens the resume picker in the new/current folder
-- you choose the session manually
+It does not rewrite rollout JSONL history. Current Codex resume discovery and saved names are represented in the state database; leaving transcripts untouched minimizes risk and preserves `/rename` data exactly.
 
-Latest mode:
-- prints migrated count
-- resumes the newest migrated session immediately
+The migration uses parameterized SQLite updates in one transaction. It refuses `/` as an old root.
 
-Windows note:
-- If an already-open resume chooser still shows the old path, cancel it with `Ctrl+C` and launch a new `codex resume`.
-- Newer Codex builds can read the displayed "Session directory" from the first `session_meta.payload.cwd` record in the per-session JSONL, not only from `state_5.sqlite`.
+## Rollback journal
 
-## Safety notes
-- this changes only Codex session metadata, not repository files
-- it updates all matching sessions in one SQLite transaction
-- if you want your own backup first, copy:
-```bash
-cp ~/.codex/state_5.sqlite ~/.codex/state_5.sqlite.bak
+The workstation state database is about 9.6 GB, so creating a full database copy for every small folder rename would be wasteful. Before changing rows, `codexmv` writes a small private journal instead:
+
+```text
+~/.codex/backups/codexmv/move-YYYYMMDD-HHMMSS-microseconds.json
 ```
 
-## Real example from this machine
-This was used to move sessions from:
-- `/home/lachlan/ProjectsLFS/nhi_reconstruction`
+The journal has mode `0600` and records:
 
-to:
-- `/home/lachlan/ProjectsLFS/OpenHI`
+- session UUID;
+- old cwd;
+- new cwd;
+- old and new roots;
+- database path and timestamp.
 
-Command:
-```bash
-cd ~/ProjectsLFS/OpenHI
-codexmv ../nhi_reconstruction .
-```
+This is sufficient to audit or reverse the narrow cwd change without duplicating the entire database.
+
+## Names are preserved
+
+`codexmv` updates only `threads.cwd`. It does not update `threads.name`, `preview`, `title`, transcript content, pin state, or timestamps. A session named with `/rename` therefore keeps the same name and appears as `Name: ...` in the destination picker.
 
 ## Troubleshooting
-### No sessions found under old path
-- check the old path carefully
-- try absolute paths
-- make sure you are using the same Linux user that created the sessions
 
-### sqlite3 missing
-```bash
-sudo apt install sqlite3
+### No sessions found
+
+```text
+codexmv: no sessions found under old path: ...
 ```
 
-### Wrapper not updated in current shell
+Check the original path with:
+
+```bash
+codexr --all --non-strict old-folder-name
+```
+
+### Use native resume after migration
+
+```bash
+codexmv --native /old/path /new/path
+```
+
+### Reload wrapper definitions
+
 ```bash
 source ~/.bashrc
+type codexmv
 ```
+
+## Implementation
+
+- `~/scripts/codex_wrapper.sh`
+- `~/scripts/codex_session_tool.py`
+- `~/scripts/sourced_codex_wrappers.sh`
+- `~/bin/codexmv`
