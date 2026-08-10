@@ -128,6 +128,46 @@ end only that failed process tree, remove the temporary test runner, and restore
 any temporarily adjusted `mediaanalysisd` or `mds_stores` priority before the
 next release operation.
 
+## Repair A Stale Developer Directory After Reboot
+
+If `xcrun` suddenly reports a missing `DEVELOPER_DIR`, verify the selected path
+before reinstalling Xcode. In the validated incident, `xcode-select` retained a
+path to a removed Xcode 26.6 bundle while the complete Xcode 26.3 application
+was still present.
+
+```bash
+xcode-select -p
+find /Applications -maxdepth 1 -type d -name 'Xcode*.app' -print
+/Applications/Xcode-26.3.0.app/Contents/Developer/usr/bin/xcodebuild -version
+
+sudo xcode-select --switch \
+  /Applications/Xcode-26.3.0.app/Contents/Developer
+xcrun simctl shutdown all
+```
+
+Recheck the three renderer defaults and confirm zero booted devices. Idle
+CoreSimulator registration services are not equivalent to a booted virtual
+device; keep the UI and Metal renderer closed.
+
+## Route One Phone Operation, Then Remove It
+
+An external test phone needs source-scoped routing at the router because a
+local process namespace cannot classify traffic that originates on another LAN
+device. The reusable `astrill-lazy device-flow` command therefore requires:
+
+- one exact IPv4 host rather than a subnet;
+- the router-observed MAC address;
+- explicit destination domains rather than wildcards;
+- an explicit TCP/UDP port; and
+- one owner ID used for compare-and-swap deletion.
+
+The EchoMind verification routed only the Play endpoints observed in phone
+logs on port 443. The genuine internal-testing listing then loaded, and the
+owner-scoped overlay was removed with an empty readback. Codex, SSH, Ubuntu,
+the Mac, and unrelated clients never entered this temporary route. Shared CDN
+IP addresses remain an IP-layer limitation, so keep the domain list minimal
+and the overlay lifetime short.
+
 Restore the default renderer only for a deliberate bounded diagnostic:
 
 ```bash
