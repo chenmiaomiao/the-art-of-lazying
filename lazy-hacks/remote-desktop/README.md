@@ -28,6 +28,8 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - why normal phone-keyboard text remained lossy after the physical-key fix
   - the 52/52 isolated phone-text test and first 72 exact live `x11-text` calls
   - confirmation that both phone typing and the UU computer-keyboard panel are complete
+  - why a native VNC relay made the old Wine mouse focus gate fail, and the
+    authenticated direct-X11 mouse fix with exact click/wheel acceptance
   - where to find the public source submodule and exact `xxd`/`objdump` patch record
   - the one-command installer, verification, rollback, and security boundaries
   - the versioned manifest, sandboxed staging, and audited upstream-update workflow

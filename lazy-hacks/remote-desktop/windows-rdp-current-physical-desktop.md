@@ -135,10 +135,12 @@ physical display leaves video working but causes the input broker to report:
 focus=timeout result=0 error=21
 ```
 
-That state rejects both keyboard and pointer input. The single-window sidecar
-keeps the actual UU process on the private display, forwards only its window
-to the local desktop, and restores focus to `Ubuntu-Desktop-Relay` when the
-management viewer closes.
+On the older local-RDP input path, that state rejects both keyboard and pointer
+input. The single-window sidecar keeps the actual UU process on the private
+display, forwards only its window to the local desktop, and restores the relay
+when the management viewer closes. A host using the native VNC relay plus the
+direct-X11 route no longer depends on Wine foreground focus for mouse or
+keyboard injection.
 
 ## Verification
 
@@ -166,8 +168,11 @@ broker=~/.local/share/wineprefixes/uu-remote/drive_c/users/$USER/Temp/uu-input-b
 grep 'focus=' "$broker" | tail -n 20
 ```
 
-Fresh controller input should report `focus=ready`, `result=1`, and
-`error=0`. Historical timeout records can remain earlier in the same log.
+Fresh controller input on the RDP route should report `focus=ready`, a matching
+result, and `error=0`. On the direct-X11 route, keyboard records report
+`route=x11`, phone text reports `route=x11-text`, and mouse records report
+`route=x11-mouse`; all use `focus=bypassed` with matching results and `error=0`.
+Historical timeout records can remain earlier in the same log.
 
 ## Recovery Rules
 

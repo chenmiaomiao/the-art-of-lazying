@@ -133,14 +133,16 @@ That is why the failure could look inconsistent:
   conversion boundary. All 219 sampled broker calls at 12 ms were accepted
   even while visible omissions remained.
 
-The final route removes only that unreliable local keyboard chain:
+The first direct-X11 route removed only that unreliable local keyboard chain:
 
 ```text
 UU -> normal-token broker -> authenticated X11 helper
    -> XTEST + XSync -> XRDP Xorg desktop
 ```
 
-It leaves video, mouse, and clipboard on their working relay. This is also why
+At that milestone it left video, mouse, and clipboard on their working relay.
+The later native-VNC mouse failure documented below justified extending the
+same authenticated helper without changing video or clipboard. This is why
 the evidence supports a careful conclusion: the dominant defect was in the old
 local nested route or its resulting back-pressure, but the tests do not
 identify one exact proprietary UU, Wine, FreeRDP, GNOME RDP, or libei function
@@ -159,8 +161,10 @@ broker acceptance in the same nested Wine/FreeRDP path.
 The follow-up maps the complete normalized chord array first, then submits that
 array to the authenticated X11 helper as one keyboard-only request. It falls
 back to RDP only if X11 fails before any event is injected, so it never replays
-an ambiguously partial shortcut. The helper still accepts only bounded,
-non-Unicode keyboard records; Unicode interpretation remains in the broker.
+an ambiguously partial shortcut. At this stage the helper accepted only
+bounded, non-Unicode keyboard records; Unicode interpretation remained in the
+broker. Protocol v2 later added bounded mouse records without moving Unicode
+interpretation across that boundary.
 
 An early implementation also exposed a separate 41 ms transport delay between
 the broker and helper. It wrote the request header and events separately over
@@ -192,19 +196,20 @@ desktop through two paths:
 | Phone text on the old nested route | 13/13 broker calls accepted, but 11/13 characters visible | Broker success still did not prove downstream delivery |
 | Phone text through isolated X11 route | 52/52 transitions in exact order | Complete normalization and helper submission were lossless |
 | Live phone text through X11 | First 72 calls exact, `error=0`, 0–2 ms; visible typing complete | The same narrow bypass resolved the phone native-keyboard loss |
+| Mouse through isolated X11 route | 6/6 movement, click, and wheel records; exact final coordinates | The native VNC relay no longer depends on a Wine foreground window |
 
 The final design is deliberately narrow:
 
 1. Keep `rdp` as the global default so a known-good older/Wayland computer
    does not change.
 2. Enable `x11` only for an affected, verified Xorg/XRDP desktop.
-3. Accept only bounded, non-Unicode, keyboard-only records in the native
-   helper. Phone Unicode is normalized and validated in the broker first.
+3. Accept only bounded keyboard and mouse records in the native helper. Phone
+   Unicode is normalized and validated in the broker first.
 4. Map the complete request before injecting its first event.
 5. Fall back to RDP only when failure is known to occur before injection.
 6. Never replay an ambiguous partial request; a late original plus a retry can
    type duplicate or dangerous shortcuts.
-7. Track held keys and release them if the broker disconnects.
+7. Track held keys and mouse buttons and release them if the broker disconnects.
 8. Supervise the helper inside the existing service instead of adding another
    polling daemon.
 
@@ -213,31 +218,60 @@ binds an ephemeral loopback-only port, and requires a fresh 256-bit token on
 each service start. The port file lives in the user's mode-0700 runtime
 directory. The token is inherited through process environments rather than
 stored in configuration or exposed in the command line. Logs contain counts,
-route, timing, and result only—never keycodes or typed text.
+route, timing, and result only—never keycodes, mouse coordinates, or typed text.
 
 ## Video Works but Nothing Can Control Ubuntu
 
-UU controller or terminal-agent diagnostics can leave the UU GUI active on the
-private Xvfb display instead of the full-screen `Ubuntu-Desktop-Relay`. Video
-continues, but the broker reports `focus=timeout`, `result=0`, and `error=21`,
-so pointer and keyboard events are rejected.
+First identify the saved relay type:
 
-Recover without restarting the bridge:
+```bash
+grep '^UURB_DESKTOP_RELAY=' ~/.config/uu-remote-bridge/environment
+```
+
+With the older `rdp` relay, UU or terminal-agent diagnostics could leave its
+management window active instead of `Ubuntu-Desktop-Relay`. Video continued,
+but the broker reported `focus=timeout result=0 error=21`. In that architecture
+the bounded recovery was:
 
 ```bash
 uu-agent focus 'Ubuntu-Desktop-Relay'
 ```
 
-The supervised launcher now checks the private active window once per second
-and restores the relay automatically. This guard affects only Wine's private
-display, not the physical GNOME desktop. After reconnecting, require fresh
-broker records with `focus=ready`, matching counts, and `error=0`.
+That is not the correct fix for `UURB_DESKTOP_RELAY=vnc`. The full-screen relay
+there is a native Linux VNC Viewer window, not a Wine `HWND`. X11 can focus it,
+but the old Wine mouse path can never confirm it through
+`GetForegroundWindow`, so every click fails at the same timeout. Repeated focus,
+network, XRDP, or audio changes do not repair this boundary.
+
+The repository-native fix extends the existing authenticated direct-X11 helper
+to mouse input. Protocol v2 carries bounded movement, buttons, and vertical/
+horizontal wheel records alongside keyboard input. The helper injects them
+into the selected live X11 desktop and the broker reports
+`route=x11-mouse focus=bypassed ... error=0`. Hosts still configured with
+`UURB_KEYBOARD_ROUTE=rdp` retain the prior route. The reviewed implementation
+is bridge commit `cc0331b` and the submodule in this repository pins that exact
+revision.
+
+Before deployment, reproduce the input boundaries without touching the live
+desktop:
+
+```bash
+./scripts/test-x11-phone-text.sh
+./scripts/test-x11-mouse.sh
+```
+
+The mouse test requires six accepted broker records, exact final coordinates,
+and ordered click/vertical-wheel/horizontal-wheel transitions. On the live
+host, keep the UU canvas resolution equal to the selected XRDP desktop; the
+validated incident aligned both from 1680x1050 to 1920x1080 and restarted only
+`uu-remote-bridge.service`. XRDP, GNOME, and open applications stayed alive.
 
 Do not run `GameViewer.exe` on the physical display while its server, broker,
 and FreeRDP relay remain on the private display. Wine foreground state is
 shared across one prefix, even when the X windows are on different displays.
 That split was reproduced with both mouse and keyboard records returning
-`focus=timeout`, `result=0`, and `error=21`.
+`focus=timeout`, `result=0`, and `error=21` on the older RDP route. Direct X11
+input deliberately does not depend on Wine foreground state.
 
 The desktop launcher avoids the split:
 
@@ -287,7 +321,7 @@ Available route modes are:
 | Mode | Behavior |
 | --- | --- |
 | `rdp` | Compatible default; all input uses the established local relay |
-| `x11` | Require direct keyboard injection for physical keys and representable phone text; verification fails if the helper cannot start |
+| `x11` | Require direct X11 injection for mouse, physical keys, and representable phone text; verification fails if the helper cannot start |
 | `auto` | Select direct input only when the discovered live target is X11 |
 
 The choices are stored in
@@ -362,10 +396,11 @@ unfiltered network adapters.
 5. **Treat pacing as an experiment, not a cure.** Eight and twelve milliseconds
    gave useful evidence and partial improvement. Continuing to increase delay
    would only add back-pressure.
-6. **Remove one bad hop, not the whole architecture.** Keeping working video,
-   mouse, and clipboard channels unchanged made the final fix small and
-   reversible. Phone text moved only after its own A/B evidence showed the same
-   downstream loss.
+6. **Remove one bad hop, not the whole architecture.** Keep working channels
+   unchanged until evidence identifies their boundary. Phone text moved only
+   after its own A/B test; mouse moved only after the native VNC relay proved
+   the Wine foreground gate could never succeed. Video and clipboard stayed on
+   the relay.
 7. **Never replay after uncertainty.** Retrying a possibly delivered modifier
    or shortcut is more dangerous than returning one failure.
 8. **Preserve known-good machines.** New functionality is opt-in, migration
@@ -389,7 +424,7 @@ The public submodule contains the complete source and operational record:
 - `docs/security.md`: credential handling and residual risk
 - `docs/troubleshooting.md`: black video, failed input, NLA, and restart checks
 - `docs/debugging-journey.md`: evidence from failed hypotheses through the
-  final direct-X11 physical-key and phone-text routes
+  direct-X11 physical-key, phone-text, and native-VNC mouse routes
 - `docs/xrdp-and-keyboard-recovery.md`: safe XRDP recovery, physical pacing,
   direct-X11 keyboard activation, acceptance, and rollback
 - `docs/releases/v0.2.0.md`: backward-compatibility contract and validation
