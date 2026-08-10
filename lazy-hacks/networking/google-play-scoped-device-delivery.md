@@ -104,6 +104,27 @@ Therefore:
 - formal Production submission must continue to honor every independent
   metadata, legal, screenshot, device, and accountable-approval gate.
 
+## Upload-Signed QA On MIUI
+
+An exact upload-signed QA APK can test application behavior while Play delivery
+is unavailable, but keep its evidence class separate. Validate application ID,
+version code, source commit, artifact hash, custody receipt, and upload signer
+before installation. The result still cannot prove Play deployment signing,
+installer attribution, or storefront delivery.
+
+MIUI adds two relevant Developer options: **Install via USB** and **USB
+debugging (Security settings)**. Enabling the first invokes Xiaomi's own
+verification flow. A later ADB install may show a separate countdown dialog in
+which **Install** is disabled until the countdown reaches zero. Do not select
+**Remember my choice** before confirming the enabled action; preserving a deny
+can make later sessions fail immediately with `INSTALL_FAILED_USER_RESTRICTED`.
+
+Treat that dialog as a physical security boundary. If injected input does not
+complete it, keep the QA gate open. Do not spoof `com.android.vending` as the
+installer, weaken persistent verification settings, or report the upload-signed
+APK as Play-signed. Restore any bounded diagnostic setting before ending the
+session.
+
 ## Mandatory Cleanup
 
 Stop the failed Play retry, then remove the owner even when installation fails:
