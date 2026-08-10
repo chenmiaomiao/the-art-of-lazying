@@ -139,11 +139,11 @@ timeout. Do not apply this to all sound devices. After removing all physical
 links and loading that scoped rule,
 `/proc/asound/card3/pcm2p/sub0/status` read `closed`.
 
-## Disable UU's Own Audio Channel When It Is Unwanted
+## Give UU a Silent Private Audio Backend
 
 Even with the hardware PCM closed, UU's proprietary log showed that every
 controller connection calls `startAudioCapture`. If audio is unnecessary for
-this bridge, use the bridge's opt-in prefix boundary:
+this bridge, first use the bridge's opt-in prefix boundary:
 
 ```ini
 # ~/.config/systemd/user/uu-remote-bridge.service.d/20-audio-isolation.conf
@@ -162,12 +162,42 @@ systemctl --user restart uu-remote-bridge.service
 prefix. It leaves browsers, native Ubuntu audio, XRDP, and unrelated Wine
 prefixes unchanged. The compatibility default is `UURB_UU_AUDIO=system`.
 
+That cutoff alone was not the final fix. It made the host visible and removed
+all GameViewer PipeWire nodes, but a real Mac controller waited forever after
+joining. The streamer stopped at `AudioDeviceModuleImpl::InitPlayout`; room
+creation and an online badge therefore did not prove connectability.
+
+UU requires a usable media abstraction even when no sound is wanted. Point
+Wine ALSA at a private null-only namespace:
+
+```bash
+install -d -m 0700 ~/.config/uu-remote-bridge
+install -m 0600 \
+  ~/ProjectsLFS/uu-remote-ubuntu-bridge/config/alsa-null.conf \
+  ~/.config/uu-remote-bridge/alsa-null.conf
+
+WINEPREFIX="$HOME/.local/share/wineprefixes/uu-remote" \
+  /opt/wine-stable/bin/wine reg add \
+  'HKCU\Software\Wine\Drivers' /v Audio /t REG_SZ /d alsa /f
+```
+
+Add this second line to the same service drop-in:
+
+```ini
+Environment="ALSA_CONFIG_PATH=/home/USER/.config/uu-remote-bridge/alsa-null.conf"
+```
+
 On the validated host the existing XRDP session and all open applications
-survived the scoped bridge restart. The new UU server had zero PipeWire audio
-nodes, the physical PCM remained `closed`, and all live bridge checks passed.
-Unlike the rejected forced-endpoint setup, this mode also completed both
-WebRTC media factories, reported `signal connection success`, reached
-`room_state_changed: created`, and advertised `LACHLANSERVER` as `CONNECTED`.
+survived the scoped bridge restart. The server completed both media factories,
+connected signaling, created its room, and retained its GUI IPC client. It
+also had no GameViewer PipeWire nodes and no open physical PCM. Do not restart
+PipeWire, WirePlumber, XRDP, GDM, or GNOME for this repair.
+
+One independent startup race was fixed at the same time. Minimizing UU's
+layered Wine/Qt window while Qt replaced its top-level X window caused
+`BadWindow`; the GUI IPC client exited and the server destroyed its newly
+created room. The bridge now keeps that window mapped behind its supervised
+full-screen desktop relay instead of minimizing it.
 
 ## Prevent It on the Next Unreal Preview
 
@@ -206,8 +236,10 @@ cannot mute unrelated SDL applications.
 - future SHI remote previews start without an audio device unless sound is
   explicitly requested.
 - the final ALSA playback state is `closed`, not merely muted or idle;
-- UU's dedicated Wine process uses `UURB_UU_AUDIO=off`, preventing its
-  per-connection WebRTC audio capture path.
+- UU's dedicated Wine process disables `winepulse.drv` and uses the private
+  ALSA null namespace, satisfying media setup without a physical audio path;
+- the login-management window remains mapped behind the relay, so its IPC
+  lifetime is not coupled to cosmetic minimization.
 
 ## Related Notes
 

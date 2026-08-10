@@ -328,7 +328,10 @@ bridge processes remained alive. A later check found muted regenerated SHI
 streams still holding the ALSA PCM in `RUNNING`; exact-device idle suspension
 closed it. For hosts that never need UU audio, `UURB_UU_AUDIO=off` disables
 Wine PulseAudio only inside UU's dedicated prefix while preserving browser,
-Ubuntu, XRDP, and other Wine audio. See
+Ubuntu, XRDP, and other Wine audio. Because UU still requires a media backend
+before a controller can finish connecting, the validated host pairs that
+cutoff with a prefix-local ALSA null device; `off` alone can leave the client
+waiting at `InitPlayout`. See
 [Diagnose speaker pulses during a UU session](./uu-remote-speaker-pulse-pipewire-diagnosis.md).
 
 Rollback does not delete UU login state:
