@@ -5,6 +5,13 @@ turning a cloud-sync operation into an accidental cross-device deletion.
 
 ## Guides
 
+- [Online LVM expansion and safe capacity audit](./online-lvm-expansion-and-capacity-audit.md)
+  - select same-disk capacity without overwriting an unmounted operating system;
+  - reject a disk path with repeated PCIe AER errors;
+  - back up GPT and LVM metadata before changing partition or VG state;
+  - grow mounted ext4 filesystems online without changing their UUIDs; and
+  - verify and reclaim only supported caches while respecting active services.
+
 - [Fast, safe workstation cleanup](./workstation-disk-cleanup-and-downloads-organization.md)
   - measure real filesystem pressure before acting;
   - clear package/model caches through their supported tools;

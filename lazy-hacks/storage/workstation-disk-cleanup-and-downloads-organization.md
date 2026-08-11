@@ -306,3 +306,30 @@ find "$HOME/Downloads" -mindepth 1 -maxdepth 1 -printf '%y  %f\n' | sort
 
 Use `df` to judge reclaimed physical capacity. Use `du` and cache-tool reports
 to explain where apparent usage remains.
+
+## August 2026 follow-up: expand first, then clean
+
+When both Home and the projects filesystem later became crowded again, each
+was expanded online by roughly 465 GiB before another conservative cleanup.
+The operation selected blank or unallocated space on the same physical disk as
+each existing non-redundant LVM volume, preserved an unmounted Ubuntu
+filesystem, and rejected another NVMe path with recurring PCIe AER errors.
+
+After GPT/LVM metadata backups and online `lvextend -r` operations:
+
+```text
+Home:     about 1.8 TiB total, 539 GiB free, 70% used
+Projects: about 3.2 TiB total, 655 GiB free, 79% used
+```
+
+The follow-up cleanup emptied two reviewed Trash roots and used only supported
+Conda, pip, and npm cache commands. uv correctly refused to clean while an
+active service held its lock, so it was deferred rather than forced. Physical
+reclaim was about 26.9 GiB, leaving Home at 68% used and the projects
+filesystem at 79% used. Models, environments, coding-agent history, builds,
+project data, and Downloads were preserved.
+
+See
+[Online LVM expansion and safe capacity audit](./online-lvm-expansion-and-capacity-audit.md)
+for the complete partition-selection, backup, expansion, verification, and
+cleanup procedure.
