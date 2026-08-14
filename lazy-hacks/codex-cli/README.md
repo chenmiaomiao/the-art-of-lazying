@@ -4,8 +4,9 @@ This folder stores practical Codex CLI workflow tweaks used on this machine.
 
 ## Files
 - [codex-and-codexr.md](./codex-and-codexr.md)
-  - current Linux/WSL behavior for `codex`, `codexr`, and `cr`
+  - current Linux/WSL behavior for `codex`, `codexr`, `codexfork`, and `cr`
   - fast SQLite picker with saved `/rename` names and arrow-key navigation
+  - native session forking into another existing folder
   - exact cwd, `--all`, `--native`, `--non-strict`, and parameter passthrough
   - enforced `danger-full-access` + `never`
 - [codexmv-session-migration.md](./codexmv-session-migration.md)

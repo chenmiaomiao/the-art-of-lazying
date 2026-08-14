@@ -1,4 +1,4 @@
-# Fast, Native-Compatible `codex` and `codexr`
+# Fast, Native-Compatible `codex`, `codexr`, and `codexfork`
 
 ## Outcome
 
@@ -6,6 +6,7 @@ These Linux/WSL wrappers keep the convenient exact-folder resume workflow withou
 
 - `codex` retains its normal commands and parameters.
 - `codexr` remains shorthand for `codex resume`.
+- `codexfork` forks a session UUID and opens it in another existing folder.
 - `/rename` names are visible in the fast picker.
 - A saved name or UUID can be passed directly to native Codex.
 - Up/Down, `j`/`k`, paging, and live filtering work in the custom picker.
@@ -24,7 +25,7 @@ The active implementation is deliberately shared by shell functions and command 
 - `~/scripts/codex_wrapper.sh` — argument handling and native Codex dispatch
 - `~/scripts/codex_session_tool.py` — indexed SQLite query, picker UI, and cwd migration
 - `~/scripts/sourced_codex_wrappers.sh` — shell functions
-- `~/bin/codex`, `~/bin/codexr`, `~/bin/codexmv` — non-interactive command shims
+- `~/bin/codex`, `~/bin/codexr`, `~/bin/codexfork`, `~/bin/codexmv` — non-interactive command shims
 - `~/.bashrc` — sources `sourced_codex_wrappers.sh`, with the former definitions retained only as an emergency fallback
 
 This fixes the previous split where an interactive shell and `~/bin` could run different generations of the wrapper.
@@ -54,6 +55,27 @@ The wrapper passes that value to native Codex, which accepts a session UUID or s
 ```
 
 The next fast-picker launch shows the new name. Picker selection itself uses the UUID, so duplicate or similar names cannot resume the wrong row.
+
+## Fork into another folder
+
+```bash
+codexfork SESSION_ID FOLDER [PROMPT]
+```
+
+For example:
+
+```bash
+codexfork 019e1f99-289e-7711-986a-d41047f5ed21 ~/ProjectsLFS/LazyTravel
+codexfork 019e1f99-289e-7711-986a-d41047f5ed21 . "Continue from the handoff"
+```
+
+The folder must already exist. The wrapper normalizes it to an absolute path, preserves the workstation's `danger-full-access` and `never` defaults, and delegates to native `codex fork --cd`. The optional prompt must be quoted when it contains spaces.
+
+After the fork opens, give it a saved name with the native command:
+
+```text
+/rename LazyTravel
+```
 
 Official references:
 
@@ -196,7 +218,8 @@ source ~/.bashrc
 Validate command resolution:
 
 ```bash
-type codex codexr codexmv cr
+type codex codexr codexfork codexmv cr
 codex --version
 codexr --help
+codexfork --help
 ```
