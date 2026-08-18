@@ -248,9 +248,10 @@ to mouse input. Protocol v2 carries bounded movement, buttons, and vertical/
 horizontal wheel records alongside keyboard input. The helper injects them
 into the selected live X11 desktop and the broker reports
 `route=x11-mouse focus=bypassed ... error=0`. Hosts still configured with
-`UURB_KEYBOARD_ROUTE=rdp` retain the prior route. The reviewed implementation
-is bridge commit `cc0331b` and the submodule in this repository pins that exact
-revision.
+`UURB_KEYBOARD_ROUTE=rdp` retain the prior route. The mouse fix was introduced
+in bridge commit `cc0331b`. The submodule now pins `fa62225`, which preserves
+that fix and adds the separately opt-in stable canvas-size follower described
+below.
 
 Before deployment, reproduce the input boundaries without touching the live
 desktop:
@@ -262,9 +263,12 @@ desktop:
 
 The mouse test requires six accepted broker records, exact final coordinates,
 and ordered click/vertical-wheel/horizontal-wheel transitions. On the live
-host, keep the UU canvas resolution equal to the selected XRDP desktop; the
-validated incident aligned both from 1680x1050 to 1920x1080 and restarted only
-`uu-remote-bridge.service`. XRDP, GNOME, and open applications stayed alive.
+host, keep the UU canvas resolution equal to the selected XRDP desktop. A
+`1680x1050` XRDP source inside a `1920x1080` private UU canvas produced scaled
+side margins and displaced clicks; the reverse mismatch clipped the right or
+bottom edge. Aligning both dimensions and restarting only
+`uu-remote-bridge.service` fixed the geometry while XRDP, GNOME, and open
+applications stayed alive.
 
 Do not run `GameViewer.exe` on the physical display while its server, broker,
 and FreeRDP relay remain on the private display. Wine foreground state is
@@ -327,6 +331,48 @@ Available route modes are:
 The choices are stored in
 `~/.config/uu-remote-bridge/environment`. A later plain installer run
 preserves them.
+
+### Follow a stable XRDP size without changing XRDP
+
+Windows RDP clients can resize an existing XRDP desktop after UU starts. If UU
+deliberately shares that same X11 desktop through the VNC relay, enable the
+opt-in follower:
+
+```bash
+./install.sh --skip-packages --skip-account-login \
+  --follow-desktop-resolution on
+```
+
+At startup, the bridge aligns its private canvas to the selected desktop.
+While running, it waits through a one-minute grace period, then requires three
+identical five-second observations before accepting a new size. It ignores
+dimensions below `1024x720`, saves the accepted size atomically, and restarts
+only `uu-remote-bridge.service`. It never resizes or restarts XRDP, GNOME,
+Xorg, or shared applications. Fixed-size behavior remains the default, so an
+upgrade cannot change a working host silently.
+
+Use this only with an X11 target and the VNC relay. It solves framebuffer
+geometry; it does not modify mouse calibration or keyboard layout. Disable it
+with the same installer option set to `off`.
+
+### Keep keyboard layout an explicit choice
+
+The direct-X11 route follows the selected Ubuntu desktop's XKB layout. It does
+not hardcode Japanese JIS. With `layout: jp`, `Shift+6` produces `&` and
+`Shift+7` produces `'`; US symbol positions differ. Inspect the target rather
+than inferring it from one key:
+
+```bash
+DISPLAY=:11 XAUTHORITY="$HOME/.Xauthority" setxkbmap -query
+```
+
+RealVNC may feel controller-layout-dependent because it sends interpreted
+keysyms. UU's physical route supplies Windows virtual keys/scancodes, which
+the helper places on the target XKB key positions. UU does not expose a
+trustworthy controller-layout identity, so automatically guessing `jp` or
+`us` would destabilize a workstation that alternates among Mac, Windows,
+phone, RDP, and VNC. Keep the intended layout explicit; canvas following never
+changes it.
 
 ### Select the GNOME desktop independently
 

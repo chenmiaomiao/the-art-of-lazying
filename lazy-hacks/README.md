@@ -13,6 +13,7 @@ Small, practical workflows and shell tricks that improve daily engineering speed
 - [networking](./networking/README.md): practical home-lab networking notes, including Pi Wi-Fi-to-LAN routing and workstation default-route switching.
 - [nutstore-inotify-limit-on-ubuntu.md](./nutstore-inotify-limit-on-ubuntu.md): stop Nutstore's repeated synced-folder-limit popup by fixing inotify instance and watch limits cleanly.
 - [remote-desktop](./remote-desktop/README.md): Windows access bootstrapping with RDP/OpenSSH/UU Remote, a Wine-to-GNOME UU control bridge, GNOME automatic-login Desktop Sharing, and native RDP vs XRDP stability notes for Ubuntu 24.04.
+- [reload-bashrc-in-open-tmux-panes-safely.md](./reload-bashrc-in-open-tmux-panes-safely.md): validate `.bashrc`, reload only demonstrably idle tmux shells, and avoid disturbing running apps or unfinished commands.
 - [storage](./storage/README.md): large-first workstation cleanup, exact Downloads deduplication, and cloud-side iCloud cleanup without materializing the full Drive on a Mac.
 - [uuremote-mouse-axis.md](./uuremote-mouse-axis.md): quick fix for GameViewer/UURemote reversed horizontal mouse movement.
 - [windows-upgrade](./windows-upgrade/README.md): stage a verified Windows 11 ISO and readiness report on a non-system disk without scheduling or starting Setup.
