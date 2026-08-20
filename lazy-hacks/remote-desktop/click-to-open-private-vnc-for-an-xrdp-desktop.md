@@ -112,18 +112,19 @@ systemctl --user enable --now realvnc-current-xrdp-desktop.service
 ```
 
 The service waits quietly until both console `:0` and a real xorgxrdp display
-exist. It calls the bridge with `XRDP_VNC_AUTO_RESIZE=0`, verifies that the
-bridge selected the discovered display, opens only one Viewer, and reapplies
-EWMH fullscreen after RealVNC replaces its startup window. If the Viewer is
-closed normally, it stays closed; a failed Viewer process can be retried by
-systemd.
+exist. It first reuses a matching loopback-only x11vnc relay, including UU's
+relay when UU won the startup race. Otherwise it calls the dedicated helper
+with `XRDP_VNC_AUTO_RESIZE=0`. This avoids duplicate VNC stacks and a reboot
+race for port `5922`. It opens only one Viewer and reapplies EWMH fullscreen
+after RealVNC replaces its startup window. If the Viewer is closed normally,
+it stays closed; a failed Viewer process can be retried by systemd.
 
 Verify the boundary without typing or clicking into the desktop:
 
 ```bash
 systemctl --user status realvnc-current-xrdp-desktop.service
 ~/scripts/xrdp-vnc-bridge.sh status
-ss -tnp | grep ':5922'
+ss -tnp | grep -E 'vncviewer|x11vnc'
 pgrep -af '/usr/bin/vncviewer.*127\.0\.0\.1:22'
 ```
 

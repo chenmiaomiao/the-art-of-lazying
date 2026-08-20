@@ -10,7 +10,7 @@ unit="realvnc-current-xrdp-desktop.service"
 console_display="${REALVNC_RELAY_CONSOLE_DISPLAY:-:0}"
 xauthority="${REALVNC_RELAY_XAUTHORITY:-$HOME/.Xauthority}"
 bridge_helper="${REALVNC_RELAY_BRIDGE_HELPER:-$HOME/scripts/xrdp-vnc-bridge.sh}"
-viewer_target="${REALVNC_RELAY_VIEWER_TARGET:-127.0.0.1:22}"
+viewer_target="${REALVNC_RELAY_VIEWER_TARGET:-}"
 wait_seconds="${REALVNC_RELAY_WAIT_SECONDS:-5}"
 
 log() {
@@ -39,6 +39,43 @@ display_is_ready() {
   local display="$1"
   DISPLAY="$display" XAUTHORITY="$xauthority" \
     xdpyinfo >/dev/null 2>&1
+}
+
+find_existing_x11vnc_port() {
+  local display="$1"
+  local pid
+  local cmdline
+  local port
+
+  while read -r pid; do
+    [ -n "$pid" ] || continue
+    [ -r "/proc/$pid/cmdline" ] || continue
+    cmdline="$(tr '\0' ' ' <"/proc/$pid/cmdline")"
+    [[ " $cmdline " == *" -localhost "* ]] || continue
+    [[ " $cmdline " == *" -nopw "* ]] || continue
+    if [[ " $cmdline " != *" -display $display "* \
+       && " $cmdline " != *" -display ${display}.0 "* ]]; then
+      continue
+    fi
+    port="$(
+      ss -H -ltnp 2>/dev/null \
+        | awk -v marker="pid=$pid," '
+            index($0, marker) && $4 ~ /^127[.]0[.]0[.]1:[0-9]+$/ {
+              count = split($4, parts, ":")
+              print parts[count]
+              exit
+            }
+          '
+    )"
+    if [[ "$port" =~ ^[0-9]+$ ]] \
+      && [ "$port" -ge 5900 ] \
+      && [ "$port" -le 5999 ]; then
+      printf '%s\n' "$port"
+      return 0
+    fi
+  done < <(pgrep -u "$(id -u)" -x x11vnc 2>/dev/null || true)
+
+  return 1
 }
 
 viewer_pid() {
@@ -109,9 +146,10 @@ run_relay() {
   local bridge_status=""
   local existing_pid=""
   local launched_pid=""
+  local local_vnc_port=""
   local viewer_status=0
 
-  for command in pgrep seq vncviewer wmctrl xdotool xdpyinfo xprop; do
+  for command in pgrep seq ss vncviewer wmctrl xdotool xdpyinfo xprop; do
     command -v "$command" >/dev/null 2>&1 || {
       log "missing required command: $command"
       return 1
@@ -134,21 +172,46 @@ run_relay() {
     sleep "$wait_seconds"
   done
 
-  # Reuse the established localhost-only bridge. In particular, disable its
-  # optional XRDP resize path so this relay cannot alter the shared desktop.
-  XRDP_VNC_AUTO_RESIZE=0 \
-  XRDP_VNC_DISPLAY="$target_display" \
-    "$bridge_helper" start >/dev/null
-
   bridge_status="$(
     XRDP_VNC_AUTO_RESIZE=0 \
     XRDP_VNC_DISPLAY="$target_display" \
-      "$bridge_helper" status
+      "$bridge_helper" status 2>/dev/null || true
   )"
-  [[ "$bridge_status" == *"display=$target_display "* ]] || {
-    log "refusing mismatched bridge: $bridge_status"
-    return 1
-  }
+  if [[ "$bridge_status" == *"display=$target_display "* \
+     && "$bridge_status" =~ localhost_port=([0-9]+) ]]; then
+    local_vnc_port="${BASH_REMATCH[1]}"
+  else
+    # UU may already own a localhost-only x11vnc relay for the same X display.
+    # Reuse it instead of creating a duplicate stack or racing for port 5922.
+    local_vnc_port="$(find_existing_x11vnc_port "$target_display" || true)"
+  fi
+
+  if [ -z "$local_vnc_port" ]; then
+    # No suitable relay exists. Start the established helper with its optional
+    # XRDP resize path disabled so this service cannot alter the shared desktop.
+    XRDP_VNC_AUTO_RESIZE=0 \
+    XRDP_VNC_DISPLAY="$target_display" \
+      "$bridge_helper" start >/dev/null
+    bridge_status="$(
+      XRDP_VNC_AUTO_RESIZE=0 \
+      XRDP_VNC_DISPLAY="$target_display" \
+        "$bridge_helper" status
+    )"
+    if [[ "$bridge_status" == *"display=$target_display "* \
+       && "$bridge_status" =~ localhost_port=([0-9]+) ]]; then
+      local_vnc_port="${BASH_REMATCH[1]}"
+    fi
+  fi
+
+  [[ "$local_vnc_port" =~ ^[0-9]+$ ]] \
+    && [ "$local_vnc_port" -ge 5900 ] \
+    && [ "$local_vnc_port" -le 5999 ] || {
+      log "no safe localhost VNC relay found for $target_display"
+      return 1
+    }
+  if [ -z "$viewer_target" ]; then
+    viewer_target="127.0.0.1:$((local_vnc_port - 5900))"
+  fi
 
   existing_pid="$(viewer_pid || true)"
   if [ -n "$existing_pid" ]; then
@@ -161,7 +224,7 @@ run_relay() {
     return 0
   fi
 
-  log "opening console $console_display onto existing desktop $target_display"
+  log "opening console $console_display onto existing desktop $target_display via port $local_vnc_port"
   env DISPLAY="$console_display" XAUTHORITY="$xauthority" \
     /usr/bin/vncviewer \
       -AllowMainClose=1 \
