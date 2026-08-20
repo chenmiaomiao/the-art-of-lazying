@@ -128,6 +128,8 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - why Windows App Unicode mode fixed printable symbols but lost `Ctrl`, while Scancode still lost held `Shift`
   - how to attach localhost-only `x11vnc` to the existing XRDP/Xorg desktop
   - how a Mac launcher creates an SSH tunnel and opens RealVNC Viewer with one click
+  - how the normal RealVNC cloud entry can show the same existing XRDP/UU
+    desktop through one fullscreen localhost relay without restarting it
   - how the helper enforces a true `1620x1080` framebuffer and restores the Japanese Mac XKB map
   - why the resize credential belongs in GNOME Keyring instead of a script
   - how to start, stop, verify, and recover the bridge without rebooting or exposing a VNC port

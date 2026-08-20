@@ -57,6 +57,90 @@ display number `22`, so the Viewer target is:
 127.0.0.1:22
 ```
 
+## Make the normal RealVNC cloud entry show the XRDP desktop
+
+RealVNC Server in Service Mode normally captures the console Xorg display. On
+a multi-session Ubuntu workstation, that can be a nearly empty physical
+desktop while XRDP and UU Remote share a long-lived Xorg desktop such as
+`:11`.
+
+RealVNC documents that Service Mode provides cloud connectivity and User Mode
+can target a particular X display. User Mode, however, requires offline
+licensing and supports direct connections only. On the tested RealVNC Server
+7.16 host, setting Service Mode's accepted `display=:11.0` parameter still
+made `ConsoleDisplay` select the physical Xorg process. The setting was rolled
+back instead of relying on behavior the running server did not honor.
+
+References:
+
+- [Understanding RealVNC Server modes](https://help.realvnc.com/hc/en-us/articles/360002253238-Understanding-RealVNC-Server-Modes)
+- [RealVNC Server parameter reference](https://help.realvnc.com/hc/en-us/articles/360002251297-RealVNC-Server-Parameter-Reference)
+
+The safe cloud-compatible route is therefore:
+
+```text
+RealVNC Viewer cloud connection
+  -> RealVNC Service Mode on physical console :0
+  -> one full-screen local RealVNC Viewer
+  -> Ubuntu 127.0.0.1:5922
+  -> existing localhost-only x11vnc bridge
+  -> existing XRDP Xorg desktop :N
+```
+
+The outer cloud connection still uses the normal RealVNC computer entry. The
+local full-screen relay hides the otherwise different console desktop and
+shows the existing XRDP workspace. It does not create a desktop, send a resize
+request, restart XRDP, restart GNOME, or log out the user.
+
+Install the optional relay:
+
+```bash
+sudo apt install wmctrl
+
+install -Dm700 \
+  scripts/xrdp-vnc-bridge.sh \
+  "$HOME/scripts/xrdp-vnc-bridge.sh"
+install -Dm700 \
+  scripts/realvnc-current-xrdp-desktop.sh \
+  "$HOME/scripts/realvnc-current-xrdp-desktop.sh"
+install -Dm644 \
+  realvnc-current-xrdp-desktop.service \
+  "$HOME/.config/systemd/user/realvnc-current-xrdp-desktop.service"
+
+systemctl --user daemon-reload
+systemctl --user enable --now realvnc-current-xrdp-desktop.service
+```
+
+The service waits quietly until both console `:0` and a real xorgxrdp display
+exist. It calls the bridge with `XRDP_VNC_AUTO_RESIZE=0`, verifies that the
+bridge selected the discovered display, opens only one Viewer, and reapplies
+EWMH fullscreen after RealVNC replaces its startup window. If the Viewer is
+closed normally, it stays closed; a failed Viewer process can be retried by
+systemd.
+
+Verify the boundary without typing or clicking into the desktop:
+
+```bash
+systemctl --user status realvnc-current-xrdp-desktop.service
+~/scripts/xrdp-vnc-bridge.sh status
+ss -tnp | grep ':5922'
+pgrep -af '/usr/bin/vncviewer.*127\.0\.0\.1:22'
+```
+
+The bridge status must name the intended xorgxrdp display, and the only VNC
+transport is a loopback connection between the local Viewer and x11vnc. Record
+the Xorg and GNOME Shell PIDs before deployment and compare them afterward if
+session preservation must be proven.
+
+Rollback removes only the console relay window:
+
+```bash
+systemctl --user disable --now realvnc-current-xrdp-desktop.service
+```
+
+RealVNC Service Mode then shows the physical console again. The XRDP desktop,
+UU Remote, applications, and localhost VNC bridge remain untouched.
+
 ## Ubuntu-side helper
 
 Install the small runtime packages:

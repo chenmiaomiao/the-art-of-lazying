@@ -1,0 +1,15 @@
+[Unit]
+Description=Show the existing XRDP desktop through RealVNC Service Mode
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/scripts/realvnc-current-xrdp-desktop.sh run
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=8
+KillMode=control-group
+
+[Install]
+WantedBy=default.target
