@@ -374,6 +374,13 @@ trustworthy controller-layout identity, so automatically guessing `jp` or
 phone, RDP, and VNC. Keep the intended layout explicit; canvas following never
 changes it.
 
+For nested VNC, preserve that semantic advantage at both boundaries. The
+dedicated viewer must grab modifier keys, and x11vnc should run with explicit
+`-modtweak -xkb -add_keysyms` support. This lets US/JIS controllers and phone
+text coexist with the selected desktop map without a global layout-switching
+loop. The diagnosis and 23/23 symbol/CJK regression test are documented in
+[Multi-hop keyboard input across XRDP, RealVNC, and UU Remote](./multi-hop-keyboard-input-across-rdp-realvnc-and-uu.md).
+
 ### Select the GNOME desktop independently
 
 On a multi-session workstation, the physical/GDM desktop and a long-lived

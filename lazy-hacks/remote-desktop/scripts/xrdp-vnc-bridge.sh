@@ -283,12 +283,19 @@ start_bridge() {
   printf '%s\n' "$display" >"$display_file"
 
   x11vnc \
+    -norc \
     -display "$display" \
     -auth "$HOME/.Xauthority" \
     -localhost \
+    -no6 \
     -nopw \
     -forever \
     -shared \
+    -repeat \
+    -nobell \
+    -modtweak \
+    -xkb \
+    -add_keysyms \
     -rfbport "$port" \
     -bg \
     -o "$log_file" \

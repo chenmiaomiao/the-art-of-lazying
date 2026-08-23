@@ -42,7 +42,8 @@ Ubuntu reboot. Daily interaction then moves to VNC.
 The Ubuntu helper starts `x11vnc` with all of these properties:
 
 ```text
--localhost -nopw -forever -shared
+-norc -localhost -no6 -nopw -forever -shared
+-repeat -nobell -modtweak -xkb -add_keysyms
 ```
 
 `-nopw` is acceptable only because `-localhost` binds the VNC server to
@@ -118,6 +119,14 @@ with `XRDP_VNC_AUTO_RESIZE=0`. This avoids duplicate VNC stacks and a reboot
 race for port `5922`. It opens only one Viewer and reapplies EWMH fullscreen
 after RealVNC replaces its startup window. If the Viewer is closed normally,
 it stays closed; a failed Viewer process can be retried by systemd.
+
+Because this Viewer is a dedicated full-screen relay, it also starts with
+`GrabKeyboard=1`. Leaving the grab disabled can drop Shift/Ctrl at the
+intermediate console while still forwarding the base key—for example, `(`
+arrives as `8` and `?` as `/`. Override
+`REALVNC_RELAY_GRAB_KEYBOARD=0` only if the window is repurposed as an ordinary
+interactive Viewer. See the
+[multi-hop keyboard diagnosis](./multi-hop-keyboard-input-across-rdp-realvnc-and-uu.md).
 
 Verify the boundary without typing or clicking into the desktop:
 

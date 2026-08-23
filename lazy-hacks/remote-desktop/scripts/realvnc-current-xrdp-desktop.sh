@@ -12,6 +12,12 @@ xauthority="${REALVNC_RELAY_XAUTHORITY:-$HOME/.Xauthority}"
 bridge_helper="${REALVNC_RELAY_BRIDGE_HELPER:-$HOME/scripts/xrdp-vnc-bridge.sh}"
 viewer_target="${REALVNC_RELAY_VIEWER_TARGET:-}"
 wait_seconds="${REALVNC_RELAY_WAIT_SECONDS:-5}"
+grab_keyboard="${REALVNC_RELAY_GRAB_KEYBOARD:-1}"
+
+if [[ "$grab_keyboard" != 0 && "$grab_keyboard" != 1 ]]; then
+  printf 'REALVNC_RELAY_GRAB_KEYBOARD must be 0 or 1.\n' >&2
+  exit 2
+fi
 
 log() {
   printf '%s realvnc-current-desktop: %s\n' \
@@ -239,7 +245,7 @@ run_relay() {
       -Shared=1 \
       -Scaling=Fit \
       -DynamicResolution=0 \
-      -GrabKeyboard=0 \
+      -GrabKeyboard="$grab_keyboard" \
       -SendKeyEvents=1 \
       -SendPointerEvents=1 \
       -MenuKey= \

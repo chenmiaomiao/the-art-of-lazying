@@ -124,6 +124,15 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - how valid saved credentials preserve the old one-password direct-login workflow
   - why this should be an XRDP-only override instead of a whole-machine keyboard change
 
+- [multi-hop-keyboard-input-across-rdp-realvnc-and-uu.md](./multi-hop-keyboard-input-across-rdp-realvnc-and-uu.md)
+  - why shifted symbols degrading to their base number keys proves a lost
+    modifier boundary rather than random lag
+  - how a dedicated nested VNC viewer grabs Shift/Ctrl while x11vnc preserves
+    layout-aware keysyms and CJK
+  - why raw US/JIS geometry cannot be guessed universally, and how semantic
+    input avoids changing the shared desktop layout
+  - isolated 23/23 symbol/CJK regression testing and live-safe deployment
+
 - [click-to-open-private-vnc-for-an-xrdp-desktop.md](./click-to-open-private-vnc-for-an-xrdp-desktop.md)
   - why Windows App Unicode mode fixed printable symbols but lost `Ctrl`, while Scancode still lost held `Shift`
   - how to attach localhost-only `x11vnc` to the existing XRDP/Xorg desktop
@@ -131,6 +140,8 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - how the normal RealVNC cloud entry can show the same existing XRDP/UU
     desktop through one fullscreen localhost relay without restarting it
   - how the helper enforces a true `1620x1080` framebuffer and restores the Japanese Mac XKB map
+  - how the dedicated console relay preserves Shift/Ctrl with keyboard grab
+    and explicit x11vnc keysym handling
   - why the resize credential belongs in GNOME Keyring instead of a script
   - how to start, stop, verify, and recover the bridge without rebooting or exposing a VNC port
 
