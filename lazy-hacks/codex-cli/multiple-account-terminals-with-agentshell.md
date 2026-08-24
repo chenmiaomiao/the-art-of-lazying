@@ -17,40 +17,24 @@ This is implemented by [AgentShell](https://github.com/lachlanchen/AgentShell). 
 
 The complete upstream tutorial is also available in [AgentShell's documentation](https://github.com/lachlanchen/AgentShell/blob/main/docs/tutorial.md).
 
-## The useful copy-paste workflow
+## The three commands to remember
 
-First use:
+Run these in any terminal, from whichever directory it already uses:
 
 ```bash
-. ~/.bashrc
-agent-profile create personal
+source ~/.bashrc
+agentshell personal
+codexr
+```
+
+Replace `personal` with `lab` or `company`. Inside that named shell, plain `codex`, `codexr`, and `codexmv` use the selected account.
+
+Only the first login needs:
+
+```bash
+source ~/.bashrc
 codex --account personal login
 agent-profile history personal shared
-
-cd ~/ProjectsLFS/LALACHAN
-codexr --account personal
-```
-
-Everyday use:
-
-```bash
-. ~/.bashrc
-cd ~/ProjectsLFS/LALACHAN
-agentshell personal
-agentshell -v
-codexr
-codex
-exit
-```
-
-A second terminal can use another login against the same files:
-
-```bash
-. ~/.bashrc
-cd ~/ProjectsLFS/LALACHAN
-agentshell lab
-codex login                 # first use only inside this dedicated shell
-codexr
 ```
 
 ## Understand the two kinds of profile
