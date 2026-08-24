@@ -176,4 +176,3 @@ Expected behavior:
 - `agent-profile list` shows the label;
 - current-directory access is unchanged;
 - no default `~/.codex/auth.json` is copied into the profile.
-
