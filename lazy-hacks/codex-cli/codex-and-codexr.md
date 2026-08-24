@@ -30,6 +30,8 @@ The active implementation is deliberately shared by shell functions and command 
 
 This fixes the previous split where an interactive shell and `~/bin` could run different generations of the wrapper.
 
+The picker resolves its database from `CODEX_SQLITE_HOME`, then `CODEX_HOME`, then `~/.codex`. This permits AgentShell profiles to keep separate authentication while intentionally sharing one resume index. If a new private profile has no SQLite database yet, the wrapper opens Codex's native picker instead of failing on a missing file.
+
 ## Native names and `/rename`
 
 Current Codex stores a renamed chat in the `threads.name` field, separately from the older title/preview fields. The picker now chooses its display text in this order:

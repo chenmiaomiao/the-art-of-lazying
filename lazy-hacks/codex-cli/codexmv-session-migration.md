@@ -48,10 +48,10 @@ new cwd:   /b/new/service/api
 
 ## Current storage behavior
 
-The current Linux implementation updates:
+The current Linux implementation updates `state_5.sqlite` under `CODEX_SQLITE_HOME`, falling back to `CODEX_HOME` and then `~/.codex`:
 
 ```text
-~/.codex/state_5.sqlite
+$CODEX_SQLITE_HOME/state_5.sqlite
 └── threads.cwd
 ```
 

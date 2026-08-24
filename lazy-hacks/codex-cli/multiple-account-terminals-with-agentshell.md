@@ -62,6 +62,26 @@ agent-profile status lab
 codex --account lab login status
 ```
 
+## Choose private or shared history
+
+Authentication and session indexing are separate choices. Keep each account's SQLite history private:
+
+```bash
+agent-profile history company private
+```
+
+Or let several account logins use the existing shared Codex history:
+
+```bash
+agent-profile history personal shared
+agent-profile history lab shared
+agent-profile history company shared
+```
+
+The login remains in each profile's private `CODEX_HOME`; only `CODEX_SQLITE_HOME` points at the shared index. The workstation's `personal`, `lab`, and `company` profiles currently use shared mode so `codexr --account NAME` can find the established sessions.
+
+Use private mode when company or lab policy should prevent titles/previews from appearing across account profiles.
+
 ## Dedicate a terminal to one account
 
 The cleanest long-running workflow is a named shell:
@@ -82,6 +102,14 @@ codexmv
 `pwd` remains `/path/to/project`. Run `exit` to return to the parent shell.
 
 Open another terminal and run `agentshell personal` to use a different account against the same folder.
+
+Show the active terminal profile at any time:
+
+```bash
+agentshell -v
+```
+
+It prints the AgentShell version, current account, login state, history mode, Codex/SQLite homes, and working directory. In an ordinary shell it reports that no profile is active. Codex's own `/status` remains the best check for the authenticated account identity inside the TUI.
 
 ## Generated shortcuts
 
@@ -138,7 +166,9 @@ Profiles live under:
 
 AgentShell isolates known authentication and session locations. It does not copy default authentication files. It clears inherited provider API-token variables before launch so a global token cannot silently override the chosen profile. A profile can deliberately define account-specific variables in its private, mode-0600 `env.sh`.
 
-Authored Codex settings and workstation skills remain available, but credentials, histories, session databases, and memories are separate. The same Unix user still owns every process, so this is not a security sandbox; use separate Unix users or containers when mutually untrusted users need OS-level isolation.
+Authored Codex settings and workstation skills remain available. Credentials are always profile-local; SQLite history is private by default and shared only when explicitly selected. The same Unix user still owns every process, so this is not a security sandbox; use separate Unix users or containers when mutually untrusted users need OS-level isolation.
+
+The workstation `codexr` and `codexmv` wrapper now resolves its database from `CODEX_SQLITE_HOME`, falling back to `CODEX_HOME`. A brand-new private profile without a database falls back to Codex's native picker instead of producing a Python traceback or a hard missing-database error.
 
 ## Installation and updates
 
@@ -164,6 +194,8 @@ The installer places the runtime under `~/.local/lib/agentshell`, command links 
 ```bash
 type codex
 agentshell --help
+agentshell -v
+agentshell status personal
 agent-profile list
 codex --version
 codex --account lab --version
@@ -176,3 +208,11 @@ Expected behavior:
 - `agent-profile list` shows the label;
 - current-directory access is unchanged;
 - no default `~/.codex/auth.json` is copied into the profile.
+
+If `codex --account NAME` reaches native Codex and reports that `--account` is unknown, reload the Bash integration once:
+
+```bash
+. ~/.bashrc
+```
+
+New terminals load it automatically.
