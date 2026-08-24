@@ -15,6 +15,62 @@ The resulting boundary is application state, not a container:
 
 This is implemented by [AgentShell](https://github.com/lachlanchen/AgentShell). It uses Codex's supported `CODEX_HOME` setting instead of changing Unix users, copying projects, or creating Docker bind mounts.
 
+The complete upstream tutorial is also available in [AgentShell's documentation](https://github.com/lachlanchen/AgentShell/blob/main/docs/tutorial.md).
+
+## The useful copy-paste workflow
+
+First use:
+
+```bash
+. ~/.bashrc
+agent-profile create personal
+codex --account personal login
+agent-profile history personal shared
+
+cd ~/ProjectsLFS/LALACHAN
+codexr --account personal
+```
+
+Everyday use:
+
+```bash
+. ~/.bashrc
+cd ~/ProjectsLFS/LALACHAN
+agentshell personal
+agentshell -v
+codexr
+codex
+exit
+```
+
+A second terminal can use another login against the same files:
+
+```bash
+. ~/.bashrc
+cd ~/ProjectsLFS/LALACHAN
+agentshell lab
+codex login                 # first use only inside this dedicated shell
+codexr
+```
+
+## Understand the two kinds of profile
+
+AgentShell's `--account` chooses a separate authentication/state directory:
+
+```bash
+codex --account personal
+```
+
+Codex's native `--profile`/`-p` option chooses a configuration profile; it does not switch ChatGPT logins. The AgentShell option must come first so the Bash dispatcher can consume it:
+
+```bash
+# Correct
+codex --account lab -m gpt-5.6-sol "Review this project"
+
+# Incorrect
+codex -m gpt-5.6-sol --account lab
+```
+
 ## Installed commands
 
 The most direct form is:
@@ -54,12 +110,31 @@ codex --account lab login
 codex --account company login
 ```
 
-Each login is stored separately. Check them with:
+Each command opens Codex's normal browser flow. Sign in with the intended account for that label. On a remote/headless terminal, use device authentication:
+
+```bash
+codex --account personal login --device-auth
+```
+
+The profile-management spelling is equivalent:
+
+```bash
+agent-profile login personal codex
+```
+
+Each login is stored separately. Check it with:
 
 ```bash
 agent-profile list
 agent-profile status lab
 codex --account lab login status
+```
+
+Inside Codex, `/status` is the best check for the exact authenticated identity. To replace one profile's login without touching the others:
+
+```bash
+codex --account lab logout
+codex --account lab login
 ```
 
 ## Choose private or shared history
@@ -81,6 +156,8 @@ agent-profile history company shared
 The login remains in each profile's private `CODEX_HOME`; only `CODEX_SQLITE_HOME` points at the shared index. The workstation's `personal`, `lab`, and `company` profiles currently use shared mode so `codexr --account NAME` can find the established sessions.
 
 Use private mode when company or lab policy should prevent titles/previews from appearing across account profiles.
+
+Changing modes does not delete either index. It only chooses which SQLite location subsequent commands use.
 
 ## Dedicate a terminal to one account
 
@@ -110,6 +187,57 @@ agentshell -v
 ```
 
 It prints the AgentShell version, current account, login state, history mode, Codex/SQLite homes, and working directory. In an ordinary shell it reports that no profile is active. Codex's own `/status` remains the best check for the authenticated account identity inside the TUI.
+
+A one-shot child process such as `codex --account personal` cannot alter its parent terminal's environment. Its launch banner names the profile; use `agentshell status personal` from the parent shell or `/status` inside Codex.
+
+## Resume sessions
+
+The workstation picker defaults to sessions whose stored working directory exactly equals the current directory:
+
+```bash
+cd /path/to/project
+codexr --account personal
+```
+
+Useful alternatives:
+
+```bash
+# All working directories
+codexr --account personal --all
+
+# Partial path search
+codexr --account personal --non-strict EchoMind
+
+# Include non-interactive runs
+codexr --account personal --all --include-non-interactive
+
+# Official/native picker
+codexr --account personal --native
+
+# Most recent native session
+codex --account personal resume --last
+
+# Resume a UUID or /rename name
+codex --account personal resume SESSION_ID_OR_NAME
+```
+
+`--non-strict` is a `codexr` wrapper option. `codex non-strict incoder` is not valid.
+
+## Move sessions after renaming a project folder
+
+`codexmv` updates the recorded working-directory metadata; it does not move project files:
+
+```bash
+codexmv --account personal /old/project/path /new/project/path
+```
+
+The wrapper writes a rollback journal before changing SQLite. Additional modes are:
+
+```bash
+codexmv --account personal --latest /old/path /new/path
+codexmv --account personal --no-resume /old/path /new/path
+codexmv --account personal --native /old/path /new/path
+```
 
 ## Generated shortcuts
 
@@ -216,3 +344,102 @@ If `codex --account NAME` reaches native Codex and reports that `--account` is u
 ```
 
 New terminals load it automatically.
+
+### The profile has no SQLite database
+
+Inspect the selected route:
+
+```bash
+agentshell status personal
+```
+
+Use the established workstation index when desired:
+
+```bash
+agent-profile history personal shared
+```
+
+A new private profile may have no database until Codex first writes state. The wrapper falls back to Codex's native picker rather than treating that as corruption.
+
+### No sessions appear for the current folder
+
+```bash
+codexr --account personal --all
+codexr --account personal --non-strict PART_OF_PATH
+```
+
+Use `codexmv` when the directory itself was renamed.
+
+### The browser used the wrong ChatGPT account
+
+```bash
+codex --account personal logout
+codex --account personal login
+```
+
+Then verify with `/status` inside Codex.
+
+### Browser login cannot return to a remote terminal
+
+```bash
+codex --account personal login --device-auth
+```
+
+### `agentshell -v` says `none (ordinary shell)`
+
+Inspect a label explicitly or enter a dedicated shell:
+
+```bash
+agentshell status personal
+agentshell personal
+agentshell -v
+```
+
+### Ctrl+C prints `KeyboardInterrupt` from the picker
+
+The picker was cancelled; the session database was not damaged. Run it again or use `q` to leave the picker.
+
+## Complete daily-use cheat sheet
+
+```bash
+# Load/update the current terminal integration
+. "$HOME/.bashrc"
+
+# Create and inspect
+agent-profile create personal
+agent-profile list
+agentshell status personal
+
+# Login and logout
+codex --account personal login
+codex --account personal login --device-auth
+codex --account personal login status
+codex --account personal logout
+
+# History routing
+agent-profile history personal shared
+agent-profile history personal private
+
+# One-shot use and resume
+codex --account personal
+codexr --account personal
+codexr --account personal --all
+
+# Dedicated terminal
+agentshell personal
+agentshell -v
+exit
+
+# Moved project directory
+codexmv --account personal /old/path /new/path
+
+# Update AgentShell
+cd "$HOME/ProjectsLFS/AgentShell"
+git pull --rebase
+./install.sh
+. "$HOME/.bashrc"
+```
+
+## Privacy boundary
+
+Never commit or upload profile `auth.json` files, tokens, cookies, or raw private histories. Shared history intentionally exposes indexed titles, previews, and paths to each profile using the index. AgentShell is convenient state separation for one trusted Unix user, not an OS security boundary.
