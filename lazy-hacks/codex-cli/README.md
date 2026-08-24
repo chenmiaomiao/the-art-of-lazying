@@ -27,6 +27,12 @@ This folder stores practical Codex CLI workflow tweaks used on this machine.
   - exact same-ID repair for `Unknown parameter: 'input[...].namespace'`
   - byte-identical backup, structured `jq` migration, semantic digest, rollback, and tmux verification
   - conservative replacement-thread fallback when the same-ID scope gate fails
+- [multiple-account-terminals-with-agentshell.md](./multiple-account-terminals-with-agentshell.md)
+  - separate personal, lab, and company Codex logins by named terminal
+  - `codex/codexr/codexmv --account NAME` with unchanged native argument forwarding
+  - persistent `agentshell NAME` terminals that keep the real working directory
+  - optional Claude, Gemini, and Copilot CLI account adapters
+  - credential inheritance safeguards, state paths, installation, and verification
 
 ## Scope
 These docs assume Codex local state under:
