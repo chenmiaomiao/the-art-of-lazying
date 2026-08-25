@@ -225,3 +225,45 @@ codex --version
 codexr --help
 codexfork --help
 ```
+
+## Long-session wrapper update safety
+
+On 2026-08-25, a Codex session that had run for several hours exited with an
+error similar to:
+
+```text
+codex_wrapper.sh: unexpected EOF while looking for matching `"'
+```
+
+The wrapper on disk passed `bash -n`; the Codex session and SQLite state were
+also healthy. The cause was the old launch model: Bash started Codex as a child
+and remained alive for the whole session while retaining the wrapper script as
+open input. Replacing or editing that same script during a long session could
+make the old Bash process encounter a transient mixture of trailing content
+when Codex eventually returned.
+
+Native dispatch now uses `exec`:
+
+```bash
+exec "$real_bin" -s danger-full-access -a never "$@"
+```
+
+This replaces the short-lived Bash wrapper with Codex, so there is no dormant
+wrapper process left to parse more shell text hours later. Deploy wrapper
+updates with an atomic rename rather than overwriting the active inode. Existing
+pre-fix sessions can keep running against their old inode; new sessions receive
+the corrected wrapper without interruption.
+
+Useful checks after an update:
+
+```bash
+bash -n ~/scripts/codex_wrapper.sh
+codex --version
+codexr --help
+codexmv --help
+lsof ~/scripts/codex_wrapper.sh
+```
+
+After the commands finish, the final `lsof` should normally show no Bash process
+holding the current wrapper open. This change does not require rewriting a
+Codex session or its database.
