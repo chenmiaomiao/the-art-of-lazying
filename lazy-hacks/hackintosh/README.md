@@ -11,6 +11,11 @@ private keys, and complete EFI trees outside this public repository.
   - distinguish demand-backed 16 GiB memory from unsupported RAM ballooning;
   - reject unsupported UHD 770 and RTX 4090 passthrough;
   - use private NAT, loopback noVNC, pinned OpenCore inputs, and a manual user service;
+  - keep one stable private QEMU `vmgenid` and a non-rotating OpenCore identity;
+  - scope the audited Sequoia DeviceCheck cstring swaps to Darwin 24 and retain
+    a stopped-VM rollback copy;
+  - separate a repaired DeviceCheck/HTTP path from a later credential-level
+    authentication rejection;
   - preserve the observed Sequoia recovery version and first-boot evidence.
 
 - [OptiPlex 3040 Monterey and multi-boot operations](./optiplex-3040-macos-postinstall-and-sequoia-staging.md)
