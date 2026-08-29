@@ -6,7 +6,10 @@ Wants=graphical-session.target
 [Service]
 Type=simple
 ExecStart=%h/scripts/realvnc-current-xrdp-desktop.sh run
-Restart=on-failure
+# The Viewer is the console-to-XRDP relay. If it is closed normally, restore
+# it as well so RealVNC Service Mode cannot fall back to the separate :0
+# desktop.
+Restart=always
 RestartSec=10
 TimeoutStopSec=8
 KillMode=control-group

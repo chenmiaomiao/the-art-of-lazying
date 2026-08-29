@@ -117,8 +117,10 @@ exist. It first reuses a matching loopback-only x11vnc relay, including UU's
 relay when UU won the startup race. Otherwise it calls the dedicated helper
 with `XRDP_VNC_AUTO_RESIZE=0`. This avoids duplicate VNC stacks and a reboot
 race for port `5922`. It opens only one Viewer and reapplies EWMH fullscreen
-after RealVNC replaces its startup window. If the Viewer is closed normally,
-it stays closed; a failed Viewer process can be retried by systemd.
+after RealVNC replaces its startup window. The user unit uses
+`Restart=always`, so closing or losing that dedicated Viewer restores the
+relay after ten seconds instead of letting Service Mode fall back to the
+separate physical-console desktop.
 
 Because this Viewer is a dedicated full-screen relay, it also starts with
 `GrabKeyboard=1`. Leaving the grab disabled can drop Shift/Ctrl at the
@@ -150,6 +152,50 @@ systemctl --user disable --now realvnc-current-xrdp-desktop.service
 
 RealVNC Service Mode then shows the physical console again. The XRDP desktop,
 UU Remote, applications, and localhost VNC bridge remain untouched.
+
+### When every remote route shows one QR image
+
+A full-screen image in RealVNC, XRDP, and UU at the same time does not prove
+that the desktop was replaced. On the 2026-08-29 incident, all three routes
+were correctly showing the same preserved XRDP/Xorg session. A Chrome app
+window displaying a login QR image had both `fullscreen` and `above` window
+states, so it covered the entire desktop. A maximized terminal beneath it then
+made the recovered workspace look as if the dock and top bar had disappeared.
+
+First preserve evidence and identify the session. Do not restart GNOME, XRDP,
+Xorg, or RealVNC merely because the screen content is surprising:
+
+```bash
+ps -eo pid,ppid,stat,args | grep -E 'Xorg.*xrdp|gnome-shell'
+DISPLAY=:N XAUTHORITY="$HOME/.Xauthority" wmctrl -lxGp
+DISPLAY=:N XAUTHORITY="$HOME/.Xauthority" xprop -id WINDOW_ID \
+  _NET_WM_NAME _NET_WM_STATE _NET_WM_DESKTOP
+```
+
+Inspect the owning process without terminating it:
+
+```bash
+tr '\0' ' ' </proc/PROCESS_ID/cmdline
+```
+
+If the exact unwanted window is confirmed, remove only its covering states and
+minimize it:
+
+```bash
+DISPLAY=:N XAUTHORITY="$HOME/.Xauthority" \
+  wmctrl -ir WINDOW_ID -b remove,fullscreen,above
+DISPLAY=:N XAUTHORITY="$HOME/.Xauthority" \
+  wmctrl -ir WINDOW_ID -b add,hidden
+```
+
+If the next application is legitimate but hides the shell chrome, remove only
+`fullscreen` and retain `maximized_vert,maximized_horz`. Verify the original
+Xorg and GNOME Shell PIDs and the window count afterward. This procedure
+preserves terminals, agents, browser profiles, and application state.
+
+The dedicated RealVNC relay uses `Restart=always` for the same reason: if its
+local Viewer exits normally, systemd recreates the relay rather than exposing
+the unrelated physical-console desktop.
 
 ## Ubuntu-side helper
 

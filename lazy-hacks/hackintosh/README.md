@@ -6,6 +6,13 @@ private keys, and complete EFI trees outside this public repository.
 
 ## Files
 
+- [Isolated Sequoia KVM on an Ubuntu Z790 workstation](./z790-sequoia-kvm-on-ubuntu.md)
+  - keep a 512 GiB qcow2 disk sparse on private SATA storage;
+  - distinguish demand-backed 16 GiB memory from unsupported RAM ballooning;
+  - reject unsupported UHD 770 and RTX 4090 passthrough;
+  - use private NAT, loopback noVNC, pinned OpenCore inputs, and a manual user service;
+  - preserve the observed Sequoia recovery version and first-boot evidence.
+
 - [OptiPlex 3040 Monterey and multi-boot operations](./optiplex-3040-macos-postinstall-and-sequoia-staging.md)
   - establish key-only SSH in both directions;
   - install signed UU Remote, nvm, Node.js, Codex CLI, and the official

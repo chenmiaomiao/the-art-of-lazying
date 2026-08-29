@@ -139,6 +139,8 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - how a Mac launcher creates an SSH tunnel and opens RealVNC Viewer with one click
   - how the normal RealVNC cloud entry can show the same existing XRDP/UU
     desktop through one fullscreen localhost relay without restarting it
+  - how a fullscreen always-above QR/browser window can impersonate a lost
+    desktop, and how to uncover it without restarting GNOME or losing windows
   - how the helper enforces a true `1620x1080` framebuffer and restores the Japanese Mac XKB map
   - how the dedicated console relay preserves Shift/Ctrl with keyboard grab
     and explicit x11vnc keysym handling
