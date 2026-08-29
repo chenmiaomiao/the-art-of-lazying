@@ -2,13 +2,22 @@
 
 Status date: 2026-08-29
 
-## Result so far
+## Verified result
 
 An isolated OpenCore/QEMU profile was built for a 13th/14th-generation Intel
 Ubuntu workstation with 128 GB RAM. The Apple-verified Sequoia recovery booted
 successfully with KVM acceleration, a blank 512 GiB virtual disk was erased as
-GUID/APFS, and the Sequoia installer started writing to it. Final installation
-and post-setup acceptance remain pending at this checkpoint.
+GUID/APFS, and both installer stages completed. The installed guest reached
+Setup Assistant at **Select Your Country or Region** on 2026-08-29. Region,
+keyboard, migration, Apple ID, and local-account choices remain deliberately
+unfinished because they are personal setup decisions, not installation
+failures.
+
+OpenCore automatically selected the installer volume after the first reboot.
+At Setup Assistant, the sparse qcow2 still presented 512 GiB to macOS while
+occupying only 32.8 GiB on SATA. QEMU/noVNC remained healthy, its three ports
+were loopback-only, and the 128 GB host retained about 77 GiB of available
+memory.
 
 The canonical scripts and detailed runbook live in
 [`lachlanchen/hackintosh`](https://github.com/lachlanchen/hackintosh), in
@@ -149,10 +158,11 @@ attaches that copy writable while keeping the upstream OpenCore image in
 snapshot mode. No host/KVM setting needed to change.
 
 The second attempt reached OpenCore, booted Recovery, formatted only QEMU
-`disk0`, and started installation. `kvm.ignore_msrs` remained at its existing
-host value because there was no unhandled-MSR evidence. This is the preferred
-diagnostic order: correct the observed launch error before applying generic
-upstream host tweaks.
+`disk0`, completed both installer stages, and reached Setup Assistant.
+OpenCore selected the correct installer volume automatically after the first
+reboot. `kvm.ignore_msrs` remained at its existing host value because there
+was no unhandled-MSR evidence. This is the preferred diagnostic order: correct
+the observed launch error before applying generic upstream host tweaks.
 
 Two automation-specific upstream assumptions were also made explicit. In
 `--action download` mode, `--shortname` does not choose the product, so the
