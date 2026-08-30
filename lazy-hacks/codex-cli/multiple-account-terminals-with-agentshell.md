@@ -137,11 +137,13 @@ agent-profile history lab shared
 agent-profile history company shared
 ```
 
-The login remains in each profile's private `CODEX_HOME`; only `CODEX_SQLITE_HOME` points at the shared index. The workstation's `personal`, `lab`, and `company` profiles currently use shared mode so `codexr --account NAME` can find the established sessions.
+The login remains in each profile's private account state. In shared mode, `CODEX_SQLITE_HOME` points at the common index and AgentShell generates a `codex-shared-home/` view: authentication/configuration resolve to the chosen profile while sessions and other history-bearing paths resolve to the common rollout tree. The workstation's `personal`, `lab`, and `company` profiles currently use shared mode so `codexr --account NAME` can find and resume the established sessions.
+
+The coherent view is important with paginated Codex history. Sharing only SQLite can make a thread appear in the picker but fail during resume with `invalid paginated history lineage ... missing source rollout`, because Codex searches `CODEX_HOME/sessions` for the immutable source rollout. AgentShell 0.4 fixes that mismatch without rewriting JSONL histories or the live SQLite database.
 
 Use private mode when company or lab policy should prevent titles/previews from appearing across account profiles.
 
-Changing modes does not delete either index. It only chooses which SQLite location subsequent commands use.
+Changing modes does not delete either history. It chooses a compatible SQLite index and rollout-tree view for subsequent commands.
 
 ## Dedicate a terminal to one account
 
@@ -280,7 +282,9 @@ AgentShell isolates known authentication and session locations. It does not copy
 
 Authored Codex settings and workstation skills remain available. Credentials are always profile-local; SQLite history is private by default and shared only when explicitly selected. The same Unix user still owns every process, so this is not a security sandbox; use separate Unix users or containers when mutually untrusted users need OS-level isolation.
 
-The workstation `codexr` and `codexmv` wrapper now resolves its database from `CODEX_SQLITE_HOME`, falling back to `CODEX_HOME`. A brand-new private profile without a database falls back to Codex's native picker instead of producing a Python traceback or a hard missing-database error.
+The workstation `codexr` and `codexmv` wrapper resolves its database from `CODEX_SQLITE_HOME`, falling back to `CODEX_HOME`. The picker also returns the selected rollout's recorded path, allowing AgentShell to use a credential-isolated view over a legacy profile-local history when necessary. A brand-new private profile without a database falls back to Codex's native picker instead of producing a Python traceback or a hard missing-database error.
+
+Already-open named terminals are supported: the wrapper refreshes their effective shared-history view before the next Codex command. Existing live Codex processes are not restarted, moved, or modified.
 
 ## Installation and updates
 
@@ -344,6 +348,17 @@ agent-profile history personal shared
 ```
 
 A new private profile may have no database until Codex first writes state. The wrapper falls back to Codex's native picker rather than treating that as corruption.
+
+### Paginated resume reports a missing source rollout
+
+```bash
+cd "$HOME/ProjectsLFS/AgentShell"
+git pull --rebase
+./install.sh
+agentshell --version personal
+```
+
+Version 0.4 or newer should report a `codex-shared-home` in shared mode. Do not manually rewrite rollout JSONL, move a rollout owned by a live Codex process, or copy a live SQLite database to repair this error.
 
 ### No sessions appear for the current folder
 

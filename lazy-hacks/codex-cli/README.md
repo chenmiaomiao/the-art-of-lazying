@@ -31,6 +31,7 @@ This folder stores practical Codex CLI workflow tweaks used on this machine.
   - separate personal, lab, and company Codex logins by named terminal
   - `codex/codexr/codexmv --account NAME` with unchanged native argument forwarding
   - persistent `agentshell NAME` terminals that keep the real working directory
+  - coherent shared SQLite/rollout views for paginated history lineage
   - optional Claude, Gemini, and Copilot CLI account adapters
   - credential inheritance safeguards, state paths, installation, and verification
 
