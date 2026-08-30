@@ -1,6 +1,6 @@
 # Isolated Sequoia KVM on an Ubuntu Z790 workstation
 
-Status date: 2026-08-29
+Status date: 2026-08-30
 
 ## Verified result
 
@@ -219,12 +219,110 @@ The post-patch authentication result established a useful boundary:
   reported an incorrect account or password;
 - 2FA was not reached, and the rejected password was cleared from the form.
 
-This verifies that the local DeviceCheck path changed, but it does **not**
-claim a completed Apple Account sign-in. Do not answer a credential-level
-rejection by rotating identity, resetting NVRAM, or automating retries. Confirm
-the exact credentials through an Apple-supported path first. A coherent local
-identity cannot fix an incorrect credential or an Apple-side account
-restriction.
+This verified that the local DeviceCheck path changed, but sign-in was not
+complete at that checkpoint. The operator later completed Apple Account login
+manually. An authenticated App Store purchase and download then verified the
+Media & Purchases path. That is not a claim that every iCloud service was
+tested. Do not answer a credential-level rejection by rotating identity,
+resetting NVRAM, or automating retries.
+
+## Xcode 26.3 without the crashing PackageKit path
+
+The current App Store listing offered Xcode 26.6, which requires a newer macOS
+release. Apple's compatibility table identifies Xcode 26.3 as the last release
+supported on Sequoia 15.6 or later, so the App Store's **Download an older
+version** path selected Xcode 26.3 (`17C529`).
+
+The download completed, but every normal installation route failed the same
+way. `installd` crashed with `EXC_BAD_ACCESS`/`SIGSEGV` inside PackageKit's
+`actualFileInstallPathsViolatingReadOnlySystemLocationsEvaluatingDestinationPath`
+analysis. The client surfaced only `PKInstallErrorDomain Code=200`, “An error
+occurred connecting to the installation service.” More than 500 GB was free,
+authentication succeeded, and both `mas` and native App Store paths reproduced
+the stack. It was not a disk-space or incomplete-download problem.
+
+The effective recovery retained the authenticated package before App Store
+cleanup. During `mas install 497799835`, a root shell hard-linked the active
+package and its receipt from the per-user `com.apple.AppStore/497799835` cache
+to an owner-only capture directory. A hard link shares the same blocks and does
+not double a multi-gigabyte download. After PackageKit failed, the retained
+package passed `pkgutil --check-signature` as **signed by Apple for the App
+Store** with a trusted timestamp. Its SHA-256 was:
+
+```text
+89d9e6b90fead5da4b40fda0b26a8f32e2f9889fb0b2d9c594c3820c13b1af58
+```
+
+Do not substitute a raw unauthenticated CDN download. That object remained
+encrypted and could not be opened as an Apple package.
+
+The verified package was expanded without invoking `installer`. Its payload is
+Apple's `pbzx` format, supported by Sequoia's built-in `aa` tool:
+
+```bash
+pkgutil --expand Xcode-26.3-AppStore.pkg Xcode-26.3-expanded
+mkdir -m 700 Xcode-26.3-staging
+aa extract \
+  -i Xcode-26.3-expanded/Xcode.pkg/Payload \
+  -d Xcode-26.3-staging \
+  -t 4 -wt 2 -enable-dedup -enable-holes
+
+spctl --assess --type execute -vv \
+  Xcode-26.3-staging/Applications/Xcode.app
+codesign --verify --deep --strict --verbose=2 \
+  Xcode-26.3-staging/Applications/Xcode.app
+```
+
+Gatekeeper accepted the bundle as a Mac App Store application from Apple, and
+deep verification reported `valid on disk` and `satisfies its Designated
+Requirement`. Only then was it installed and initialized:
+
+```bash
+sudo mv Xcode-26.3-staging/Applications/Xcode.app /Applications/Xcode.app
+sudo chown -R root:wheel /Applications/Xcode.app
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -license accept
+sudo xcodebuild -runFirstLaunch
+xcodebuild -version
+```
+
+The result is Xcode 26.3 build `17C529`. It already bundles macOS 26.2, iOS
+26.2, and watchOS 26.2 SDKs. The storage-scoped policy is to add only universal
+iOS and watchOS simulator runtimes on this Intel guest. Never use
+`-downloadAllPlatforms`; tvOS and visionOS runtimes are intentionally omitted.
+The package capture, expansion, and staging data used about 5.5 GiB and were
+deleted after first-launch verification.
+
+Install only those two runtimes with:
+
+```bash
+xcodebuild -downloadPlatform iOS -architectureVariant universal
+xcodebuild -downloadPlatform watchOS -architectureVariant universal
+xcrun simctl list runtimes
+```
+
+The verified registrations are iOS 26.3.1 (`23D8133`) and watchOS 26.2
+(`23S303`), each supporting both `x86_64` and `arm64`. Xcode occupies about
+11 GiB. The runtime images plus the required Intel dyld caches occupy about
+14.0 GiB for iOS and 7.5 GiB for watchOS. No Xcode, `.dmg`, or `.simruntime`
+artifact remained in Downloads, and about 448 GiB remained free afterward.
+Swift 6.2.4, Apple Clang 17, and a one-line Swift execution test passed.
+
+Registration is verified; simulator graphics performance is not. This KVM
+profile has no Metal acceleration, so physical Apple hardware remains the
+appropriate final validation target for performance-sensitive applications.
+
+## Keep iCloud online-first without deleting cloud data
+
+iCloud Drive remains enabled and `Optimize Mac Storage` is on. At verification
+time the guest contained zero downloaded iCloud Drive files and a zero-size
+Photos library, so it already consumed no local cloud-file space.
+
+Use Finder's **Remove Download** for any synchronized item that later becomes
+local. Never use `rm` for this purpose: deleting a synced item can delete it
+from iCloud and every device. Optimize Mac Storage can retain recent files when
+space is abundant. A strict never-sync policy would require disabling **Sync
+this Mac**, which is a different tradeoff and was not applied here.
 
 ## A usable unattended guest without publishing credentials
 
@@ -265,11 +363,57 @@ different per-session D-Bus address.
 The private console is:
 
 ```text
-http://127.0.0.1:6141/vnc.html?autoconnect=1&resize=scale
+http://127.0.0.1:6141/vnc.html?autoconnect=1&resize=scale&layoutsafe=1
 ```
 
 Tunnel that loopback port over SSH when operating remotely. Never expose raw
 VNC, noVNC, QMP, or a guest browser profile to the LAN or Internet.
+
+## Preserve punctuation across JIS, UU, RDP, noVNC, and macOS
+
+The real input chain is not one keyboard. It can begin with a Japanese
+MacBook, a phone keyboard, UU Remote's computer-keyboard panel, or a Windows
+keyboard, then cross RDP into Ubuntu before noVNC reaches the macOS KVM. A
+global JIS or U.S. hard-code therefore fixes one path by breaking another.
+
+The observed mismatch had a narrower cause. Ubuntu's active X11 desktop used
+XKB `jp`; QEMU exposed a generic USB keyboard; and macOS used ABC/U.S. noVNC
+1.3.0 negotiated QEMU's extended key event, which sends physical key positions
+and assumes the guest layout matches the client. Thus JIS Shift+7, intended as
+apostrophe, reached the U.S. guest position for ampersand. A keysym-only test
+was also insufficient because the required target Shift state was lost.
+
+The repository now carries a hash-pinned patch that translates only printable
+ASCII punctuation into explicit U.S. virtual-key chords at the final noVNC to
+QEMU boundary. It temporarily normalizes Shift, sends the intended chord, and
+restores held Shift keys. Letters, navigation, CJK input methods, and
+Control/Alt/Command shortcuts remain on upstream handling. No Ubuntu or macOS
+global keyboard preference is changed.
+
+Run the idempotent preparation explicitly when validating a deployment:
+
+```bash
+./scripts/hackintosh-kvm.sh prepare-novnc
+```
+
+The generated web root is private ignored state and occupies about 1.2 MiB;
+`/usr/share/novnc` is not modified. The launcher uses it automatically on the
+next start. The live running VM was migrated by replacing only its loopback
+noVNC proxy, so QEMU, Safari, and guest state never restarted. A transient
+proxy is bound to the VM service for the current lifecycle; ordinary future
+starts use the launcher directly.
+
+websockify serves static files from its process working directory. Therefore,
+if the private web root is regenerated while a proxy is live, the generator
+retains that previous 1.2 MiB root until the proxy is restarted. This avoids
+breaking an existing browser while still promoting the verified update. A
+later preparation removes stale roots once no process owns them.
+
+Browser-level acceptance verified a deliberately mismatched JIS Shift+7 as
+apostrophe, plus `@`, brackets, slash, colon, question mark, and the remaining
+ASCII punctuation in TextEdit. Append `layoutsafe=0` for immediate upstream
+behavior. Clipboard paste remains the safest credential workaround until a
+particular remote chain has passed its punctuation test.
 
 ## First-boot evidence and one corrected defect
 
@@ -325,3 +469,9 @@ unbounded installers and snapshots on a shared workstation.
 - [Dortania Intel GPU support](https://dortania.github.io/GPU-Buyers-Guide/modern-gpus/intel-gpu.html)
 - [Apple macOS Sequoia software license](https://www.apple.com/legal/sla/docs/macOSSequoia.pdf)
 - [Apple macOS Sequoia 15.7.9 security content](https://support.apple.com/en-ca/148171)
+- [Apple Xcode system requirements](https://developer.apple.com/xcode/system-requirements/)
+- [Apple: work with iCloud Drive files](https://support.apple.com/guide/mac-help/-mchl1a02d711/mac)
+- [Apple: optimize Mac storage](https://support.apple.com/guide/mac-help/optimize-storage-space-sysp4ee93ca4/mac)
+- [noVNC API: physical `code` versus symbolic `keysym`](https://novnc.com/noVNC/docs/API.html)
+- [QEMU extended key event protocol](https://github.com/TigerVNC/tigervnc/blob/master/doc/rfbproto.rst)
+- [QEMU keycodemap database](https://github.com/qemu/keycodemapdb/blob/master/data/README)
