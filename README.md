@@ -221,18 +221,20 @@ python words_update.py
 Load shell functions:
 
 ```bash
-cd scripts/lazy-care/SafeShell
-cat safeshell_functions.sh >> ~/.bashrc   # or ~/.zshrc
-source ~/.bashrc                          # or source ~/.zshrc
+source "$HOME/ProjectsLFS/the-art-of-lazying/scripts/lazy-care/SafeShell/safeshell_functions.sh"
 ```
 
 Use commands:
 
 ```bash
-saferm /path/to/file_or_directory
-unrm /path/to/file_or_directory
-removeitanyway /path/to/file_or_directory
+rm -rf ./generated-build
+unrm ./generated-build
+removeitanyway -rf ./generated-build
 ```
+
+SafeShell is Bash-specific. For persistent setup, source its file once from
+`~/.bashrc`; do not repeatedly append the file contents. See the
+[complete SafeShell guide](scripts/lazy-care/SafeShell/README.md).
 
 ### 3) ChatGPT Traffic resolver
 
@@ -274,13 +276,14 @@ Ensure `words_phonetics.db` exists in `code/EinkWordsGPT/` (it is currently incl
 
 ### SafeShell trash location
 
-`saferm`/`unrm`/`removeitanyway` use a fixed base path:
+`saferm`/`unrm`/`removeitanyway` use this workstation default:
 
 ```bash
 /mnt/disk/BIN/ROOT
 ```
 
-Adjust this path in `scripts/lazy-care/SafeShell/safeshell_functions.sh` if your environment differs.
+The default fails closed unless `/mnt/disk` is mounted. For another machine,
+set `SAFERM_TRASH_ROOT` before sourcing the script instead of editing it.
 
 ## Examples
 
@@ -314,10 +317,11 @@ Adjust this path in `scripts/lazy-care/SafeShell/safeshell_functions.sh` if your
   - Verify your OpenAI API key is set in environment variables before running `words_gpt.py` or `words_update.py`.
 
 - `saferm`/`unrm` not found after setup:
-  - Confirm you sourced the correct shell rc file and appended `safeshell_functions.sh` successfully.
+  - Confirm Bash sourced `safeshell_functions.sh` directly or through `~/.bashrc`.
 
 - `unrm` cannot restore files:
-  - Check that your restore path matches SafeShell's mirrored trash layout under `/mnt/disk/BIN/ROOT`.
+  - Run `unrm --list PATH`; use an original absolute/relative path, a direct
+    `/mnt/disk/BIN/ROOT/...` path, or `unrm --newest PATH` for repeated versions.
 
 - `repo2text` script creates no output:
   - Update `source_directory` in `convert-repo-to-merged-text.py` to an existing folder.
