@@ -152,6 +152,11 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
   - how to diagnose Caps Lock, Shift, and XRDP keymap state separately
   - how to patch XRDP keymaps so client-side Caps Lock is ignored while normal `Shift` still works
 
+- [gnome-terminal-crash-from-repeated-xkb-remapping.md](./gnome-terminal-crash-from-repeated-xkb-remapping.md)
+  - why one `gnome-terminal-server` crash can remove every terminal window while tmux survives
+  - how repeated `setxkbmap` rebuilds created an avoidable GTK/GNOME event storm
+  - the per-display, state-aware Caps Lock watcher and verification commands
+
 ## Scope
 
 - Ubuntu 24.04
