@@ -99,10 +99,12 @@ UURB_VNC_GRAB_KEYBOARD=on
 The RealVNC console relay uses `REALVNC_RELAY_GRAB_KEYBOARD=1` by default. Set
 either value to `off`/`0` only if the viewer is no longer a dedicated relay.
 
-For clipboard text, the private UU viewer independently enables
-`ClientCutText` and `ServerCutText`, selects X11 `CLIPBOARD` rather than
-`PRIMARY`, and suppresses stale initial transfer. Keyboard grab and clipboard
-synchronization solve different boundaries and should not be conflated.
+For clipboard text, the private UU viewer enables `ClientCutText` but disables
+`ServerCutText`; x11vnc is receive-only with `-seldir recv`. The relay selects
+X11 `CLIPBOARD` rather than `PRIMARY` and suppresses stale initial transfer.
+This lets UU/private clipboard updates enter Ubuntu without allowing semantic
+target text to feed back and trigger a duplicate paste. Keyboard grab and
+clipboard direction solve different boundaries and should not be conflated.
 
 Reusable source files:
 

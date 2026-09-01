@@ -8,7 +8,8 @@ Direct UU Remote input into an Ubuntu XRDP/Xorg desktop now preserves:
 - dictated or phone-IME text containing multiple lines;
 - Chinese, Japanese, emoji, and other Unicode that has no active keyboard
   chord; and
-- bidirectional text clipboard transfer through the private VNC relay.
+- one-way UU/private-to-Ubuntu text clipboard transfer without a reverse
+  feedback loop.
 
 The change restarts only `uu-remote-bridge.service`. It does not restart XRDP,
 Xorg, GNOME Shell, or applications on the shared desktop.
@@ -55,6 +56,7 @@ newline / tab / CJK / emoji / other non-representable Unicode
   -> bounded authenticated text request
   -> UTF-16 validation and CRLF normalization
   -> target desktop CLIPBOARD owner
+  -> verify that a new X11 clipboard owner exists
   -> one Shift+Insert paste
 ```
 
@@ -64,6 +66,9 @@ pair when a controller sends its high and low units in separate calls.
 The text payload is not written to logs or runtime files. It intentionally
 remains in the user's clipboard after paste; restoring an old clipboard too
 quickly would race applications that request the pasted data asynchronously.
+If the helper cannot confirm that the new `xclip` process owns `CLIPBOARD`, it
+fails without issuing `Shift+Insert`. This prevents a busy desktop from
+pasting the previous clipboard repeatedly.
 
 ## Clipboard Relay Settings
 
@@ -73,15 +78,19 @@ defaults:
 
 ```text
 ClientCutText=1
-ServerCutText=1
+ServerCutText=0
 SendPrimary=0
 SendInitialClipboard=0
 ServerClipboardGraceTime=5000
+x11vnc -seldir recv
 ```
 
 `SendPrimary=0` selects X11 `CLIPBOARD`, not the selection-only `PRIMARY`
 buffer that can contain stale or single-line text. Disabling initial transfer
 prevents bridge startup from replacing an existing clipboard with stale text.
+The reverse target-to-private path is disabled at both relay boundaries. This
+prevents semantic text placed on Ubuntu's clipboard from echoing into the UU
+canvas and triggering another paste.
 
 This enables the local UU/Wine-to-Ubuntu text clipboard boundary. Final
 controller-side copy/paste still depends on the UU client exposing its own
@@ -96,6 +105,7 @@ Run these before changing the live bridge:
 cd ~/ProjectsLFS/uu-remote-ubuntu-bridge
 
 ./scripts/test-x11-clipboard-text.sh
+./scripts/test-vnc-clipboard-relay.sh
 ./scripts/test-x11-phone-text.sh
 ./scripts/test-vnc-keyboard-relay.sh
 ./scripts/test-x11-mouse.sh
@@ -108,11 +118,17 @@ typing into the logged-in desktop or reading its clipboard. The isolated test
 scripts use a shared display-allocation lock so parallel runs cannot choose the
 same X socket.
 
+The VNC clipboard test proves that client cut text reaches the isolated relay,
+the target Unicode paste is exact, and target clipboard data cannot feed back
+to the private display.
+
 Expected semantic evidence is:
 
 ```text
 clipboard-text=unicode+multiline exact
 broker-route=x11-clipboard-text error=0
+vnc-clipboard=client-cut-text received server-feedback=disabled
+semantic-target-paste=unicode exact clipboard-loop=absent
 ```
 
 ## Safe Deployment

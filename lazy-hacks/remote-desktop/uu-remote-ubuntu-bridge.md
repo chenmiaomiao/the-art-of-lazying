@@ -197,11 +197,14 @@ representable text on the fast key route and sends newline, tab, CJK, emoji,
 and other non-representable Unicode to the target X11 `CLIPBOARD`, followed by
 one `Shift+Insert` paste. CRLF becomes one newline, Backspace remains an
 editing key, and split UTF-16 surrogate commits are joined. Payloads are not
-logged or written to runtime files.
+logged or written to runtime files. Before pasting, the helper confirms through
+`XGetSelectionOwner` that the new `xclip` process really owns `CLIPBOARD`; a
+timeout fails closed instead of pasting stale data.
 
-The private VNC viewer now also explicitly enables both clipboard directions,
-uses X11 `CLIPBOARD` instead of `PRIMARY`, and suppresses stale initial
-clipboard transfer. See
+The private VNC viewer now allows UU/private clipboard text toward Ubuntu but
+blocks the reverse direction with `ServerCutText=0`; x11vnc independently uses
+`-seldir recv`. It uses X11 `CLIPBOARD` instead of `PRIMARY` and suppresses
+stale initial transfer. See
 [Preserve multiline dictation and clipboard text](./uu-remote-multiline-dictation-and-clipboard.md).
 
 ## Root Cause and Final Fix
@@ -597,7 +600,9 @@ The semantic-text follow-up adds:
 - exact Chinese and two-line delivery in an isolated editable X11 target;
 - a surrogate pair deliberately split across two broker requests and restored
   as one emoji;
-- explicit bidirectional VNC clipboard flags using `CLIPBOARD`, not `PRIMARY`;
+- fail-closed X11 clipboard-owner verification before every semantic paste;
+- one-way VNC clipboard flags using `CLIPBOARD`, not `PRIMARY`, with an
+  isolated no-feedback-loop acceptance test;
 - 98 passing source/runtime tests plus unchanged keyboard, mouse, and VNC
   input regressions; and
 - a bridge-only live deployment that preserved the XRDP logind leader and
