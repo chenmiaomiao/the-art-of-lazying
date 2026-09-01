@@ -17,6 +17,7 @@ Small, practical workflows and shell tricks that improve daily engineering speed
 - [storage](./storage/README.md): large-first workstation cleanup, exact Downloads deduplication, and cloud-side iCloud cleanup without materializing the full Drive on a Mac.
 - [uuremote-mouse-axis.md](./uuremote-mouse-axis.md): quick fix for GameViewer/UURemote reversed horizontal mouse movement.
 - [windows-upgrade](./windows-upgrade/README.md): stage a verified Windows 11 ISO and readiness report on a non-system disk without scheduling or starting Setup.
+- [windows-always-on](./windows-always-on/README.md): keep a remote Windows workstation awake and visible, make OS updates manual-only, audit reboot causes, and restore the exact prior state.
 - [windows-remote-keyboard-and-ssh.md](./windows-remote-keyboard-and-ssh.md): fix remote Caps Lock desync and set up Windows/Linux OpenSSH in both directions.
 
 ## Convention
