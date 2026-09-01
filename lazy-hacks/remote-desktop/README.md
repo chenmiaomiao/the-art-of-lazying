@@ -133,6 +133,15 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
     input avoids changing the shared desktop layout
   - isolated 23/23 symbol/CJK regression testing and live-safe deployment
 
+- [uu-remote-multiline-dictation-and-clipboard.md](./uu-remote-multiline-dictation-and-clipboard.md)
+  - why direct UU reduced multiline dictation to key events even though the
+    same text worked through Windows and RDP
+  - adaptive fast-key versus semantic clipboard routing for newline, CJK, and
+    split-surrogate emoji input
+  - explicit two-way VNC `CLIPBOARD` synchronization without stale `PRIMARY`
+    or startup replacement
+  - isolated regressions, bridge-only deployment, verification, and rollback
+
 - [click-to-open-private-vnc-for-an-xrdp-desktop.md](./click-to-open-private-vnc-for-an-xrdp-desktop.md)
   - why Windows App Unicode mode fixed printable symbols but lost `Ctrl`, while Scancode still lost held `Shift`
   - how to attach localhost-only `x11vnc` to the existing XRDP/Xorg desktop

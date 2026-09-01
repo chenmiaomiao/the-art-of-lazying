@@ -20,14 +20,14 @@ nested Wine/FreeRDP conversion and enter the live Xorg desktop through a small
 native XTEST helper. In its accepted live run, 256 bounded sampled physical-key
 calls used `route=x11`, all returned `error=0`, and typing became very smooth.
 
-The immutable `v0.2.0` tag still behaves exactly as released. A validated
-follow-up on `main` now sends layout-representable phone native-keyboard text
-through the same helper after converting it to ordinary virtual-key chords.
-Video, pointer, and clipboard remain on the established local RDP relay. The
-isolated phone-text acceptance preserved all 52 requested transitions, and the
-first 72 live calls used `route=x11-text`, returned exact result counts with
-`error=0` in 0–2 ms, and produced visibly complete text. The computer-keyboard
-panel remained exact as well.
+The immutable `v0.2.0` tag still behaves exactly as released. Validated
+follow-ups on `main` send layout-representable phone native-keyboard text
+through the same helper as ordinary virtual-key chords, while newline, tab,
+CJK, emoji, and other non-representable Unicode use semantic clipboard paste.
+The isolated tests preserve all 52 ordinary transitions plus exact Chinese,
+two-line, and split-surrogate emoji text. The private VNC relay now also
+enables explicit two-way `CLIPBOARD` synchronization without substituting the
+X11 `PRIMARY` selection. Video remains on the established local relay.
 
 The implementation is kept in the
 [public submodule](../../code/uu-remote-ubuntu-bridge). It can be fetched
@@ -50,17 +50,20 @@ still required through the official client.
 UU controller
   -> GameViewerServer.exe in Wine
        |
-       +-> video, mouse, clipboard
-       |     -> Windows SDL FreeRDP in private Xvfb
-       |     -> GNOME Remote Desktop on 127.0.0.1
+       +-> video and clipboard transport
+       |     -> selected local RDP or VNC relay in private Xvfb
        |     -> logged-in GNOME desktop
        |
-       +-> physical keyboard and representable phone text
+       +-> physical keyboard, mouse, and representable phone text
              -> bounded normal-token broker
                   | default: Windows SendInput -> local RDP
                   | opt-in on Xorg: authenticated loopback helper
                   v
              XTEST -> live XRDP/Xorg desktop
+       |
+       +-> newline, CJK, emoji, and other semantic phone text
+             -> authenticated bounded UTF-16 request
+             -> target X11 CLIPBOARD + Shift+Insert paste
 ```
 
 UU captures the FreeRDP window as a normal Windows application. GNOME Remote
@@ -176,10 +179,30 @@ The isolated Xvfb/Wine acceptance preserved 52/52 requested transitions in
 exact order. After installation, the first 72 privacy-safe live phone-text
 records all used `route=x11-text`, returned the exact requested count with
 `error=0`, and completed in 0–2 ms. Visible phone typing and the UU
-computer-keyboard panel were both then confirmed complete. This route covers
-text representable by the active Windows keyboard layout; arbitrary CJK or
-emoji commits still require a different text protocol if `VkKeyScanW` cannot
-map them.
+computer-keyboard panel were both then confirmed complete. This key route
+covers text representable by the active Windows keyboard layout.
+
+## Follow-up: Multiline Dictation and Arbitrary Unicode
+
+A later direct-UU comparison exposed the remaining semantic boundary. Through
+UU to Windows and then RDP, multiline and Chinese dictation arrived normally;
+through the direct bridge, a newline became a real Enter and characters that
+`VkKeyScanW` could not map failed with `ERROR_NO_UNICODE_TRANSLATION` (`1113`).
+The controller had transported the text, but the bridge had reduced it to
+keyboard chords.
+
+Protocol v3 adds bounded semantic-text records on the existing authenticated
+loopback connection. The default `UURB_PHONE_TEXT_MODE=auto` keeps ordinary
+representable text on the fast key route and sends newline, tab, CJK, emoji,
+and other non-representable Unicode to the target X11 `CLIPBOARD`, followed by
+one `Shift+Insert` paste. CRLF becomes one newline, Backspace remains an
+editing key, and split UTF-16 surrogate commits are joined. Payloads are not
+logged or written to runtime files.
+
+The private VNC viewer now also explicitly enables both clipboard directions,
+uses X11 `CLIPBOARD` instead of `PRIMARY`, and suppresses stale initial
+clipboard transfer. See
+[Preserve multiline dictation and clipboard text](./uu-remote-multiline-dictation-and-clipboard.md).
 
 ## Root Cause and Final Fix
 
@@ -196,6 +219,7 @@ desktop through two paths:
 | Phone text on the old nested route | 13/13 broker calls accepted, but 11/13 characters visible | Broker success still did not prove downstream delivery |
 | Phone text through isolated X11 route | 52/52 transitions in exact order | Complete normalization and helper submission were lossless |
 | Live phone text through X11 | First 72 calls exact, `error=0`, 0–2 ms; visible typing complete | The same narrow bypass resolved the phone native-keyboard loss |
+| Semantic text through isolated clipboard route | Exact Chinese, two lines, and an emoji split across requests | Multiline and arbitrary Unicode no longer depend on keyboard-layout chords |
 | Mouse through isolated X11 route | 6/6 movement, click, and wheel records; exact final coordinates | The native VNC relay no longer depends on a Wine foreground window |
 
 The final design is deliberately narrow:
@@ -203,8 +227,8 @@ The final design is deliberately narrow:
 1. Keep `rdp` as the global default so a known-good older/Wayland computer
    does not change.
 2. Enable `x11` only for an affected, verified Xorg/XRDP desktop.
-3. Accept only bounded keyboard and mouse records in the native helper. Phone
-   Unicode is normalized and validated in the broker first.
+3. Accept only bounded keyboard, mouse, and semantic-text records in the
+   native helper. Validate text before converting it to target clipboard data.
 4. Map the complete request before injecting its first event.
 5. Fall back to RDP only when failure is known to occur before injection.
 6. Never replay an ambiguous partial request; a late original plus a retry can
@@ -249,15 +273,16 @@ horizontal wheel records alongside keyboard input. The helper injects them
 into the selected live X11 desktop and the broker reports
 `route=x11-mouse focus=bypassed ... error=0`. Hosts still configured with
 `UURB_KEYBOARD_ROUTE=rdp` retain the prior route. The mouse fix was introduced
-in bridge commit `cc0331b`. The submodule now pins `fa62225`, which preserves
-that fix and adds the separately opt-in stable canvas-size follower described
-below.
+in bridge commit `cc0331b`. The submodule now pins `58d8b73`, which preserves
+that fix, adds the separately opt-in stable canvas-size follower described
+below, and handles semantic dictation composition batches.
 
 Before deployment, reproduce the input boundaries without touching the live
 desktop:
 
 ```bash
 ./scripts/test-x11-phone-text.sh
+./scripts/test-x11-clipboard-text.sh
 ./scripts/test-x11-mouse.sh
 ```
 
@@ -325,8 +350,16 @@ Available route modes are:
 | Mode | Behavior |
 | --- | --- |
 | `rdp` | Compatible default; all input uses the established local relay |
-| `x11` | Require direct X11 injection for mouse, physical keys, and representable phone text; verification fails if the helper cannot start |
+| `x11` | Require direct X11 input for mouse and physical keys; representable phone text uses keys while semantic Unicode/multiline text uses clipboard paste |
 | `auto` | Select direct input only when the discovered live target is X11 |
+
+Phone-text behavior is selected independently:
+
+| Mode | Behavior |
+| --- | --- |
+| `auto` | Fast keys for representable text; semantic clipboard paste only when required |
+| `keys` | Compatibility rollback to the former key-only behavior |
+| `clipboard` | Diagnostic mode that pastes every phone-text commit except editing keys |
 
 The choices are stored in
 `~/.config/uu-remote-bridge/environment`. A later plain installer run
@@ -452,8 +485,9 @@ unfiltered network adapters.
 6. **Remove one bad hop, not the whole architecture.** Keep working channels
    unchanged until evidence identifies their boundary. Phone text moved only
    after its own A/B test; mouse moved only after the native VNC relay proved
-   the Wine foreground gate could never succeed. Video and clipboard stayed on
-   the relay.
+   the Wine foreground gate could never succeed. Video stayed on the relay;
+   clipboard transport remained there but its direction and X11 selection are
+   now explicit.
 7. **Never replay after uncertainty.** Retrying a possibly delivered modifier
    or shortcut is more dangerous than returning one failure.
 8. **Preserve known-good machines.** New functionality is opt-in, migration
@@ -478,6 +512,8 @@ The public submodule contains the complete source and operational record:
 - `docs/troubleshooting.md`: black video, failed input, NLA, and restart checks
 - `docs/debugging-journey.md`: evidence from failed hypotheses through the
   direct-X11 physical-key, phone-text, and native-VNC mouse routes
+- `docs/semantic-text-and-clipboard.md`: adaptive Unicode/multiline routing,
+  clipboard ownership, security boundary, and isolated acceptance
 - `docs/xrdp-and-keyboard-recovery.md`: safe XRDP recovery, physical pacing,
   direct-X11 keyboard activation, acceptance, and rollback
 - `docs/releases/v0.2.0.md`: backward-compatibility contract and validation
@@ -490,6 +526,8 @@ The public submodule contains the complete source and operational record:
 - `scripts/patch-gameviewer.py`: generic fail-closed patch, verify, and restore CLI
 - `scripts/test-x11-phone-text.sh`: isolated Xvfb/Wine phone-text route and
   exact-order acceptance test
+- `scripts/test-x11-clipboard-text.sh`: exact Chinese, multiline, and
+  split-surrogate clipboard-paste acceptance without touching the live desktop
 - `scripts/upgrade-uu-remote.sh`: reusable source pull, accepted product
   promotion, bridge refresh, verification, and rollback-safe entry point
 - `docs/reusable-upgrade.md`: exact command contract, snapshots, persistent
@@ -523,14 +561,17 @@ The quick verifier must identify the active route. For this Xorg fix it reports:
 
 ```text
 PASS  input broker uses a 0 ms physical-key delay
+PASS  input broker uses the auto phone-text mode
 PASS  direct X11 physical-key helper is active
+PASS  semantic Unicode and multiline clipboard text is available
 ```
 
 After reconnecting the UU controller, fresh content-free physical-key records
 use `category=keyboard route=x11`, while normal phone-keyboard records use
-`category=text route=x11-text`. Both must show matching requested/result counts
-and `error=0`. A test performed through ordinary RDP does not validate the UU
-route.
+`category=text route=x11-text`. Newline, CJK, emoji, and other semantic commits
+use `category=text route=x11-clipboard-text`. All must show matching
+requested/result counts and `error=0`. A test performed through ordinary RDP
+does not validate the UU route.
 
 The full verifier holds one GameViewerServer PID for 270 seconds, crossing the
 former four-minute failure interval. The original controller acceptance
@@ -550,6 +591,17 @@ The post-v0.2 phone native-keyboard acceptance adds:
   0–2 ms completion;
 - visible confirmation that both phone typing and the UU computer-keyboard
   panel produced complete text.
+
+The semantic-text follow-up adds:
+
+- exact Chinese and two-line delivery in an isolated editable X11 target;
+- a surrogate pair deliberately split across two broker requests and restored
+  as one emoji;
+- explicit bidirectional VNC clipboard flags using `CLIPBOARD`, not `PRIMARY`;
+- 98 passing source/runtime tests plus unchanged keyboard, mouse, and VNC
+  input regressions; and
+- a bridge-only live deployment that preserved the XRDP logind leader and
+  Xorg process.
 
 The wording is intentionally “strong practical acceptance,” not a universal
 zero-loss promise. The bounded diagnostics cannot reconstruct typed content,

@@ -65,6 +65,13 @@ keysym mode for such a hop; keep an explicit per-client JIS fallback for a
 genuinely raw physical-key route. Do not install a polling loop that switches
 the global XKB map based on the most recent connection.
 
+Semantic phone text needs another distinction. Representable single-line text
+can use the fast X11 key route, but newline, tab, CJK, and emoji must remain
+text rather than being approximated as key chords. The bridge now selects a
+bounded clipboard paste for those commits while leaving Backspace as an
+editing key. See
+[Preserve multiline dictation and clipboard text](./uu-remote-multiline-dictation-and-clipboard.md).
+
 ## Implemented relay settings
 
 Both reusable x11vnc launchers now request the behavior explicitly instead of
@@ -91,6 +98,11 @@ UURB_VNC_GRAB_KEYBOARD=on
 
 The RealVNC console relay uses `REALVNC_RELAY_GRAB_KEYBOARD=1` by default. Set
 either value to `off`/`0` only if the viewer is no longer a dedicated relay.
+
+For clipboard text, the private UU viewer independently enables
+`ClientCutText` and `ServerCutText`, selects X11 `CLIPBOARD` rather than
+`PRIMARY`, and suppresses stale initial transfer. Keyboard grab and clipboard
+synchronization solve different boundaries and should not be conflated.
 
 Reusable source files:
 
