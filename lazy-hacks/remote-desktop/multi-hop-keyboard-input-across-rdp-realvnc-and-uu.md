@@ -101,10 +101,18 @@ either value to `off`/`0` only if the viewer is no longer a dedicated relay.
 
 For clipboard text, the private UU viewer enables `ClientCutText` but disables
 `ServerCutText`; x11vnc is receive-only with `-seldir recv`. The relay selects
-X11 `CLIPBOARD` rather than `PRIMARY` and suppresses stale initial transfer.
-This lets UU/private clipboard updates enter Ubuntu without allowing semantic
-target text to feed back and trigger a duplicate paste. Keyboard grab and
-clipboard direction solve different boundaries and should not be conflated.
+its private-display `CLIPBOARD` rather than `PRIMARY` and suppresses stale
+initial transfer. This lets intentional UU/private clipboard updates enter
+Ubuntu without allowing semantic target text to feed back and trigger a
+duplicate paste.
+
+That relay rule is separate from semantic phone-text injection on the target.
+The semantic helper owns and verifies both target `CLIPBOARD` and `PRIMARY`
+before `Shift+Insert`, because VTE reads `PRIMARY` while other applications may
+read `CLIPBOARD`. Owning only target `CLIPBOARD` caused a real regression in
+which Chinese or smart punctuation pasted older selected text despite a
+successful broker result. Keyboard grab, relay direction, and target selection
+ownership solve three different boundaries and should not be conflated.
 
 Reusable source files:
 

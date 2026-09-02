@@ -138,8 +138,9 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
     same text worked through Windows and RDP
   - adaptive fast-key versus semantic clipboard routing for newline, CJK, and
     split-surrogate emoji input
-  - explicit two-way VNC `CLIPBOARD` synchronization without stale `PRIMARY`
-    or startup replacement
+  - one-way private-to-target VNC `CLIPBOARD` relay without startup feedback
+  - why semantic `Shift+Insert` must separately own both target `CLIPBOARD`
+    and `PRIMARY`, plus the stale-selection regression that proves it
   - isolated regressions, bridge-only deployment, verification, and rollback
 
 - [click-to-open-private-vnc-for-an-xrdp-desktop.md](./click-to-open-private-vnc-for-an-xrdp-desktop.md)

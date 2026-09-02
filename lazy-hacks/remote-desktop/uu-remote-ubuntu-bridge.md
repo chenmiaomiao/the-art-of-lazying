@@ -25,9 +25,10 @@ follow-ups on `main` send layout-representable phone native-keyboard text
 through the same helper as ordinary virtual-key chords, while newline, tab,
 CJK, emoji, and other non-representable Unicode use semantic clipboard paste.
 The isolated tests preserve all 52 ordinary transitions plus exact Chinese,
-two-line, and split-surrogate emoji text. The private VNC relay now also
-enables explicit two-way `CLIPBOARD` synchronization without substituting the
-X11 `PRIMARY` selection. Video remains on the established local relay.
+two-line, and split-surrogate emoji text. The private VNC relay permits
+one-way `CLIPBOARD` synchronization toward Ubuntu, while the target semantic
+helper owns both `CLIPBOARD` and `PRIMARY` before pasting so VTE cannot consume
+an older selection. Video remains on the established local relay.
 
 The implementation is kept in the
 [public submodule](../../code/uu-remote-ubuntu-bridge). It can be fetched
@@ -63,7 +64,8 @@ UU controller
        |
        +-> newline, CJK, emoji, and other semantic phone text
              -> authenticated bounded UTF-16 request
-             -> target X11 CLIPBOARD + Shift+Insert paste
+             -> verified target X11 CLIPBOARD + PRIMARY owners
+             -> one Shift+Insert paste
 ```
 
 UU captures the FreeRDP window as a normal Windows application. GNOME Remote
@@ -194,17 +196,20 @@ keyboard chords.
 Protocol v3 adds bounded semantic-text records on the existing authenticated
 loopback connection. The default `UURB_PHONE_TEXT_MODE=auto` keeps ordinary
 representable text on the fast key route and sends newline, tab, CJK, emoji,
-and other non-representable Unicode to the target X11 `CLIPBOARD`, followed by
-one `Shift+Insert` paste. CRLF becomes one newline, Backspace remains an
-editing key, and split UTF-16 surrogate commits are joined. Payloads are not
-logged or written to runtime files. Before pasting, the helper confirms through
-`XGetSelectionOwner` that the new `xclip` process really owns `CLIPBOARD`; a
-timeout fails closed instead of pasting stale data.
+and other non-representable Unicode through two scoped `xclip` processes that
+own the target X11 `CLIPBOARD` and `PRIMARY`, followed by one `Shift+Insert`
+paste. Both are required because VTE reads `PRIMARY` for that chord while many
+graphical applications read `CLIPBOARD`. CRLF becomes one newline, Backspace
+remains an editing key, and split UTF-16 surrogate commits are joined. Payloads
+are not logged or written to runtime files. Before pasting, the helper confirms
+through `XGetSelectionOwner` that both selections have new owners; a timeout
+fails closed instead of pasting stale data.
 
 The private VNC viewer now allows UU/private clipboard text toward Ubuntu but
 blocks the reverse direction with `ServerCutText=0`; x11vnc independently uses
-`-seldir recv`. It uses X11 `CLIPBOARD` instead of `PRIMARY` and suppresses
-stale initial transfer. See
+`-seldir recv`. `SendPrimary=0` makes that relay source intentional
+`CLIPBOARD` updates instead of stale private-display selections, while the
+target semantic helper still owns both target selections. See
 [Preserve multiline dictation and clipboard text](./uu-remote-multiline-dictation-and-clipboard.md).
 
 ## Root Cause and Final Fix
@@ -276,9 +281,10 @@ horizontal wheel records alongside keyboard input. The helper injects them
 into the selected live X11 desktop and the broker reports
 `route=x11-mouse focus=bypassed ... error=0`. Hosts still configured with
 `UURB_KEYBOARD_ROUTE=rdp` retain the prior route. The mouse fix was introduced
-in bridge commit `cc0331b`. The submodule now pins `58d8b73`, which preserves
-that fix, adds the separately opt-in stable canvas-size follower described
-below, and handles semantic dictation composition batches.
+in bridge commit `cc0331b`. The submodule now pins `2518016`, which preserves
+that fix and the separately opt-in stable canvas-size follower, handles
+semantic dictation composition batches, and prevents stale VTE `PRIMARY` text
+from replacing Chinese or punctuation commits.
 
 Before deployment, reproduce the input boundaries without touching the live
 desktop:
@@ -600,9 +606,12 @@ The semantic-text follow-up adds:
 - exact Chinese and two-line delivery in an isolated editable X11 target;
 - a surrogate pair deliberately split across two broker requests and restored
   as one emoji;
-- fail-closed X11 clipboard-owner verification before every semantic paste;
-- one-way VNC clipboard flags using `CLIPBOARD`, not `PRIMARY`, with an
-  isolated no-feedback-loop acceptance test;
+- fail-closed verification of new X11 `CLIPBOARD` and `PRIMARY` owners before
+  every semantic paste;
+- a stale-`PRIMARY` sentinel regression proving that VTE cannot paste older
+  desktop text;
+- one-way VNC clipboard flags that source intentional private-display
+  `CLIPBOARD` updates, with an isolated no-feedback-loop acceptance test;
 - 98 passing source/runtime tests plus unchanged keyboard, mouse, and VNC
   input regressions; and
 - a bridge-only live deployment that preserved the XRDP logind leader and
