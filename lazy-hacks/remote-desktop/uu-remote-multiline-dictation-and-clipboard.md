@@ -5,16 +5,21 @@
 Direct UU Remote input into an Ubuntu XRDP/Xorg desktop now preserves:
 
 - ordinary fast keyboard text;
+- continuous dictation whose provisional composition exceeds a short
+  keystroke batch;
 - dictated or phone-IME text containing multiple lines;
 - Chinese, Japanese, emoji, and other Unicode that has no active keyboard
   chord; and
 - one-way UU/private-to-Ubuntu text clipboard transfer without a reverse
   feedback loop.
 
-It also prevents the production regression in which typing one Chinese
-dictation commit or smart punctuation pasted unrelated, older clipboard text.
-The verified implementation is bridge commit
-[`2518016`](https://github.com/lachlanchen/uu-remote-ubuntu-bridge/commit/2518016c2b1fe677584637999d9112df2022744c).
+It also prevents the production regressions in which typing one Chinese
+dictation commit or smart punctuation pasted unrelated clipboard text, and in
+which continuing to speak flushed a composition after it crossed 64 input
+records. The selection fix is bridge commit
+[`2518016`](https://github.com/lachlanchen/uu-remote-ubuntu-bridge/commit/2518016c2b1fe677584637999d9112df2022744c);
+the long-dictation extension is
+[`6dee29a`](https://github.com/lachlanchen/uu-remote-ubuntu-bridge/commit/6dee29a).
 
 The change restarts only `uu-remote-bridge.service`. It does not restart XRDP,
 Xorg, GNOME Shell, or applications on the shared desktop.
@@ -110,6 +115,33 @@ This is a useful diagnostic pattern: a successful injection log proves that
 the helper accepted an action, not that the receiving toolkit consumed the
 selection the helper expected.
 
+## Why Continuous Speech Still Failed
+
+The first semantic fix made one short English or Chinese message reliable, but
+it exposed a separate size boundary when dictation continued. UU accumulates a
+provisional phrase and can submit the whole revision as one Windows
+`SendInput` array. Content-free production metadata showed:
+
+```text
+short requests: count <= 64, result=count, error=0
+long requests:  count=70/76/92/98/114/332, result=0, error=5
+```
+
+The rejection occurred in the injected DLL before the broker or X11 helper saw
+the request. It was not an RDP, network, microphone, speech-recognition, or
+desktop-focus failure. This explains the misleading user experience: a short
+message worked, then a longer provisional revision disappeared or left only an
+older fragment.
+
+The corrected protocol uses the same explicit maximum in the injected DLL,
+Wine broker, and authenticated X11 helper: 2,048 input records, enough for
+1,024 UTF-16 press/release pairs. The whole provisional call stays one
+transaction. This detail matters for Unicode: splitting it into rapid 64-record
+clipboard pastes appeared reasonable, but an isolated test proved that lazy
+X11 selection requests could all read the newest owner and retain only the
+final fragment. A request beyond 2,048 records fails before injection rather
+than partially changing the target.
+
 ## Clipboard Relay Settings
 
 The dedicated RealVNC Viewer between the private Wine desktop and the shared
@@ -164,12 +196,14 @@ python3 -m unittest discover -s tests
 The semantic-text test creates its own Xvfb, Wine prefix, editor, and helper.
 It first gives `PRIMARY` the sentinel
 `stale-primary-must-never-be-pasted`, then proves that exact Chinese, two-line,
-and split-surrogate emoji delivery replaces that selection. It therefore
-catches both content corruption and the exact stale-selection regression
-without typing into the logged-in desktop or reading its clipboard. Failed
-runs preserve their isolated artifacts for diagnosis; successful runs clean
-them. The test scripts use a shared display-allocation lock so parallel runs
-cannot choose the same X socket.
+split-surrogate emoji, and a 2,000-record Unicode composition replace that
+selection. The phone-text test sends another 2,000-record call through the real
+hooked `SendInput` boundary and verifies every X11 transition in exact order.
+These tests catch stale selection, old size-limit, content-corruption, and
+ordering regressions without typing into the logged-in desktop or reading its
+clipboard. Failed runs preserve their isolated artifacts for diagnosis;
+successful runs clean them. The scripts use a shared display-allocation lock
+so parallel runs cannot choose the same X socket.
 
 The VNC clipboard test proves that client cut text reaches the isolated relay,
 the target Unicode paste is exact, and target clipboard data cannot feed back
@@ -180,12 +214,14 @@ Expected semantic evidence is:
 ```text
 clipboard-text=unicode+multiline exact
 broker-route=x11-clipboard-text error=0
+long-unicode-text=2000/2000 one-paste exact
+long-phone-text=2000/2000 one-batch order=exact
 vnc-clipboard=client-cut-text received server-feedback=disabled
 semantic-target-paste=unicode exact clipboard-loop=absent
 ```
 
-The accepted `2518016` run also retained 98 passing unit tests and unchanged
-phone-key, VNC-keyboard, mouse, and one-way clipboard regressions.
+The accepted `6dee29a` run retained all 99 unit tests plus the phone-key,
+VNC-keyboard, mouse, and one-way clipboard regressions.
 
 ## Safe Deployment
 
@@ -270,6 +306,10 @@ CJK text fails, preserve semantic text instead of adding key delays or changing
 the whole desktop keyboard layout. When the requested semantic route succeeds
 but old content appears, inspect the target toolkit's X11 selection semantics;
 do not add retries, because retries can paste the wrong selection repeatedly.
+When short dictation works but continuous speech disappears, compare the
+original request `count` with the protocol bound before changing timing,
+network, RDP, or IME settings. Preserve one semantic transaction rather than
+blindly splitting a lazy clipboard paste.
 
 Implementation and deeper security details are in:
 
