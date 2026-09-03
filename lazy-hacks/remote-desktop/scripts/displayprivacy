@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage:
+  displayprivacy off|on|status [both|ubuntu|windows]
+  displayprivacy both|ubuntu|windows off|on|status
+
+The default target is both computers. This controls only physical monitor
+power; desktops, applications, and remote sessions remain running.
+
+Local configuration:
+  ~/.config/display-privacy/config
+
+Required for Windows control:
+  DISPLAY_PRIVACY_WINDOWS_HOST=user@windows-host
+
+Optional:
+  DISPLAY_PRIVACY_WINDOWS_SCRIPT=C:\Users\user\Scripts\display-privacy.ps1
+  DISPLAY_PRIVACY_LINUX_HELPER=/path/to/linux-physical-display-privacy.sh
+EOF
+}
+
+config_file="${XDG_CONFIG_HOME:-$HOME/.config}/display-privacy/config"
+if [[ -r "$config_file" ]]; then
+    # This is a private, user-owned shell configuration file.
+    # shellcheck disable=SC1090
+    source "$config_file"
+fi
+
+case "${1:-}" in
+    off|on|status)
+        action="$1"
+        target="${2:-both}"
+        ;;
+    both|ubuntu|linux|windows)
+        target="$1"
+        action="${2:-status}"
+        ;;
+    -h|--help|'')
+        usage
+        exit 0
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
+
+[[ "$target" == linux ]] && target=ubuntu
+case "$action" in off|on|status) ;; *) usage >&2; exit 2 ;; esac
+case "$target" in both|ubuntu|windows) ;; *) usage >&2; exit 2 ;; esac
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+linux_helper="${DISPLAY_PRIVACY_LINUX_HELPER:-$script_dir/linux-physical-display-privacy.sh}"
+windows_host="${DISPLAY_PRIVACY_WINDOWS_HOST:-}"
+windows_script="${DISPLAY_PRIVACY_WINDOWS_SCRIPT:-}"
+task_prefix="${DISPLAY_PRIVACY_WINDOWS_TASK_PREFIX:-LazyingArt-DisplayPrivacy}"
+
+run_ubuntu() {
+    if [[ ! -x "$linux_helper" ]]; then
+        printf 'Linux display helper is not executable: %s\n' "$linux_helper" >&2
+        return 1
+    fi
+    "$linux_helper" "$action"
+}
+
+run_windows() {
+    local remote_command task_name
+
+    if [[ -z "$windows_host" ]]; then
+        printf 'Set DISPLAY_PRIVACY_WINDOWS_HOST in %s.\n' "$config_file" >&2
+        return 1
+    fi
+
+    if [[ "$action" == status ]]; then
+        if [[ -z "$windows_script" ]]; then
+            printf 'Set DISPLAY_PRIVACY_WINDOWS_SCRIPT in %s for status.\n' \
+                "$config_file" >&2
+            return 1
+        fi
+        printf -v remote_command \
+            'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%s" -Action Status' \
+            "$windows_script"
+        ssh -o BatchMode=yes -o ConnectTimeout=8 "$windows_host" "$remote_command"
+        return
+    fi
+
+    if [[ "$action" == off ]]; then
+        task_name="${task_prefix}Off"
+    else
+        task_name="${task_prefix}On"
+    fi
+    printf -v remote_command 'schtasks.exe /Run /TN "%s"' "$task_name"
+    ssh -o BatchMode=yes -o ConnectTimeout=8 "$windows_host" "$remote_command"
+}
+
+result=0
+if [[ "$target" == both || "$target" == windows ]]; then
+    printf '%s\n' '--- Windows ---'
+    run_windows || result=1
+fi
+if [[ "$target" == both || "$target" == ubuntu ]]; then
+    printf '%s\n' '--- Ubuntu ---'
+    run_ubuntu || result=1
+fi
+
+exit "$result"

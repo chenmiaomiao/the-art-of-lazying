@@ -4,6 +4,13 @@ Practical notes for keeping Ubuntu remote access usable when GNOME native RDP, R
 
 ## Files
 
+- [physical-display-privacy-with-remote-desktops.md](./physical-display-privacy-with-remote-desktops.md)
+  - turn off Ubuntu and Windows physical monitors without suspending either computer
+  - preserve XRDP, UU Remote, GNOME, applications, terminals, and window geometry
+  - use one `displayprivacy off|on|status` command for both hosts or either host
+  - explain why native UU anti-peep is not a reliable Linux/Wine bridge boundary
+  - install an interactive Windows task so SSH requests reach the visible console session
+
 - [OptiPlex 3040 macOS post-install and Sequoia staging](../hackintosh/optiplex-3040-macos-postinstall-and-sequoia-staging.md)
   - install signed native UU Remote and configure its required macOS consent
   - establish separate key-only SSH identities for macOS and Windows on the same hardware
