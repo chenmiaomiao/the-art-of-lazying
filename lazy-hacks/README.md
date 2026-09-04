@@ -16,6 +16,7 @@ Small, practical workflows and shell tricks that improve daily engineering speed
 - [reload-bashrc-in-open-tmux-panes-safely.md](./reload-bashrc-in-open-tmux-panes-safely.md): validate `.bashrc`, reload only demonstrably idle tmux shells, and avoid disturbing running apps or unfinished commands.
 - [storage](./storage/README.md): large-first workstation cleanup, exact Downloads deduplication, and cloud-side iCloud cleanup without materializing the full Drive on a Mac.
 - [uuremote-mouse-axis.md](./uuremote-mouse-axis.md): quick fix for GameViewer/UURemote reversed horizontal mouse movement.
+- [virtualization](./virtualization/README.md): KVM/QEMU Windows Tiny11 and macOS workstation architecture, verified installer lessons, private runtime boundaries, and links to reusable tooling.
 - [windows-upgrade](./windows-upgrade/README.md): stage a verified Windows 11 ISO and readiness report on a non-system disk without scheduling or starting Setup.
 - [windows-always-on](./windows-always-on/README.md): keep a remote Windows workstation awake and visible, make OS updates manual-only, audit reboot causes, and restore the exact prior state.
 - [windows-remote-keyboard-and-ssh.md](./windows-remote-keyboard-and-ssh.md): fix remote Caps Lock desync and set up Windows/Linux OpenSSH in both directions.
